@@ -1,0 +1,45 @@
+flowchart TD
+    INPUT["📄 Input Extraído<br/>JSON Estruturado"] --> SUPERVISOR["🧠 Supervisor de<br/>Complexidade"]
+    
+    SUPERVISOR -->|"Simples"| FAST["⚡ Agente Rápido<br/>Gemini 2.5 Flash"]
+    SUPERVISOR -->|"Complexo"| ROUTER["🔀 Roteador<br/>de Matéria"]
+    
+    ROUTER -->|"Cível"| CIVEL["👨‍⚖️ Agente Cível<br/>Claude Sonnet 4"]
+    ROUTER -->|"Penal"| PENAL["👨‍⚖️ Agente Penal<br/>Claude Sonnet 4"]
+    ROUTER -->|"Trabalhista"| TRAB["👨‍⚖️ Agente Trabalhista<br/>Claude Sonnet 4"]
+    ROUTER -->|"Tributário"| TRIB["👨‍⚖️ Agente Tributário<br/>Claude Sonnet 4"]
+    
+    CIVEL --> RAG["🔍 RAG Engine<br/>pgvector + Few-Shot"]
+    PENAL --> RAG
+    TRAB --> RAG
+    TRIB --> RAG
+    FAST --> RAG
+    
+    RAG -->|"Precedentes<br/>Injetados"| GENERATOR["📝 Gerador de Minuta<br/>Claude Opus 4"]
+    
+    GENERATOR --> VALIDATOR["✅ Validador de Output<br/>Zod / Pydantic"]
+    
+    VALIDATOR -->|"✅ Válido"| HITL["👤 Human-in-the-Loop<br/>Revisão do Advogado"]
+    VALIDATOR -->|"❌ Inválido"| RETRY["🔄 Retry<br/>com feedback"]
+    RETRY --> GENERATOR
+    
+    HITL -->|"Aprovado"| EXPORT["📥 Exportar DOCX"]
+    HITL -->|"Revisado"| GENERATOR
+    HITL -->|"Rejeitado"| ROUTER
+    
+    subgraph "Observabilidade"
+        LS["📈 LangSmith<br/>Chain-of-Thought Logging"]
+    end
+    
+    SUPERVISOR -.-> LS
+    CIVEL -.-> LS
+    PENAL -.-> LS
+    TRAB -.-> LS
+    TRIB -.-> LS
+    GENERATOR -.-> LS
+    
+    style INPUT fill:#4CAF50,color:#fff
+    style SUPERVISOR fill:#9C27B0,color:#fff
+    style GENERATOR fill:#2196F3,color:#fff
+    style HITL fill:#FF9800,color:#fff
+    style EXPORT fill:#4CAF50,color:#fff

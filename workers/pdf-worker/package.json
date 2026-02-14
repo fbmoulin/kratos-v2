@@ -1,0 +1,11 @@
+{
+  "name": "@kratos/pdf-worker",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Python worker - no TS build needed\"",
+    "lint": "echo \"Use ruff for Python linting\"",
+    "test": "echo \"No tests yet\"",
+    "clean": "rm -rf __pycache__"
+  }
+}

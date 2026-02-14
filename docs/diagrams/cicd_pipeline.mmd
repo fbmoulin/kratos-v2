@@ -1,0 +1,38 @@
+flowchart LR
+    subgraph "Desenvolvimento"
+        DEV["👨‍💻 Developer<br/>Feature Branch"]
+    end
+
+    subgraph "CI - Pull Request"
+        PR["📋 Pull Request<br/>para main"] --> LINT["🔍 Lint<br/>ESLint + Prettier"]
+        LINT --> TYPE["📐 Type Check<br/>TypeScript"]
+        TYPE --> TEST["🧪 Testes<br/>Unitários"]
+        TEST --> BUILD["🔨 Build<br/>Turborepo"]
+    end
+
+    subgraph "CD - Staging"
+        MERGE["✅ Merge<br/>para main"] --> DEPLOY_S_FE["🚀 Deploy Frontend<br/>Vercel (Staging)"]
+        MERGE --> DEPLOY_S_BE["🚀 Deploy Backend<br/>Fly.io (Staging)"]
+        MERGE --> DEPLOY_S_WK["🚀 Deploy Worker<br/>Fly.io (Staging)"]
+        DEPLOY_S_FE --> INT_TEST["🧪 Testes de<br/>Integração"]
+        DEPLOY_S_BE --> INT_TEST
+        DEPLOY_S_WK --> INT_TEST
+    end
+
+    subgraph "CD - Produção"
+        TAG["🏷️ Tag Release<br/>vX.Y.Z"] --> APPROVE["👤 Aprovação<br/>Manual"]
+        APPROVE --> MIGRATE["🗄️ Migrações<br/>de DB"]
+        MIGRATE --> DEPLOY_P_FE["🚀 Deploy Frontend<br/>Vercel (Prod)"]
+        MIGRATE --> DEPLOY_P_BE["🚀 Deploy Backend<br/>Fly.io (Prod)"]
+        MIGRATE --> DEPLOY_P_WK["🚀 Deploy Worker<br/>Fly.io (Prod)"]
+    end
+
+    DEV --> PR
+    BUILD -->|"✅ Sucesso"| MERGE
+    INT_TEST -->|"✅ Sucesso"| TAG
+
+    style DEV fill:#4CAF50,color:#fff
+    style APPROVE fill:#FF9800,color:#fff
+    style DEPLOY_P_FE fill:#2196F3,color:#fff
+    style DEPLOY_P_BE fill:#2196F3,color:#fff
+    style DEPLOY_P_WK fill:#2196F3,color:#fff

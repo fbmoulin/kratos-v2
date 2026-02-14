@@ -1,0 +1,33 @@
+flowchart TD
+    A["📤 Upload do PDF<br/>pelo Usuário"] --> B["⚡ API recebe<br/>o arquivo"]
+    B --> C["📦 Salva no<br/>Supabase Storage"]
+    B --> D["🗄️ Cria registro<br/>status: pending"]
+    B --> E["📨 Enfileira job<br/>no Redis"]
+    
+    E --> F["⚙️ Worker Celery<br/>consome o job"]
+    
+    F --> G{"Tipo de<br/>conteúdo?"}
+    
+    G -->|"Texto e Estrutura"| H["📄 Docling (IBM)<br/>Extração Estrutural"]
+    G -->|"Tabelas"| I["📊 pdfplumber<br/>Extração de Tabelas"]
+    G -->|"Imagens/Gráficos"| J["👁️ Gemini 2.5 Flash<br/>Vision API"]
+    
+    H --> K["🔗 Merge dos<br/>Resultados"]
+    I --> K
+    J --> K
+    
+    K --> L{"Validação<br/>Pydantic"}
+    
+    L -->|"✅ Válido"| M["🗄️ Salva na tabela<br/>extractions"]
+    L -->|"❌ Inválido"| N["🔄 Retry com<br/>fallback"]
+    
+    M --> O["📝 Atualiza status:<br/>completed"]
+    N --> P["📝 Atualiza status:<br/>failed"]
+    
+    O --> Q["🔔 Notifica Frontend<br/>WebSocket / Polling"]
+    P --> Q
+    
+    style A fill:#4CAF50,color:#fff
+    style L fill:#FF9800,color:#fff
+    style M fill:#2196F3,color:#fff
+    style P fill:#f44336,color:#fff

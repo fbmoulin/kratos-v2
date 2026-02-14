@@ -1,0 +1,66 @@
+graph TB
+    subgraph "Camada de Apresentação"
+        FE["🖥️ Frontend<br/>React 19 + Vite + Tailwind CSS 4"]
+    end
+
+    subgraph "Camada de API e Orquestração"
+        API["⚡ API Backend<br/>FastAPI / Express"]
+        AUTH["🔐 Supabase Auth<br/>JWT + RLS"]
+    end
+
+    subgraph "Camada de Processamento Assíncrono"
+        QUEUE["📨 Redis<br/>Message Broker"]
+        WORKER["⚙️ PDF Worker<br/>Celery (Python)"]
+        
+        subgraph "Pipeline de Extração"
+            DOCLING["📄 Docling (IBM)<br/>Extração Estrutural"]
+            PDFP["📊 pdfplumber<br/>Tabelas"]
+            GEMINI_V["👁️ Gemini 2.5 Flash<br/>Vision / OCR"]
+        end
+    end
+
+    subgraph "Camada de IA (LangGraph)"
+        SUPERVISOR["🧠 Supervisor<br/>Complexidade"]
+        ROUTER["🔀 Roteador<br/>de Matéria"]
+        AGENTS["👨‍⚖️ Agentes Especialistas<br/>Cível / Penal / Trabalhista"]
+        RAG["🔍 RAG Engine<br/>Few-Shot Prompting"]
+        GENERATOR["📝 Gerador<br/>de Minuta"]
+        VALIDATOR["✅ Validador<br/>de Output"]
+    end
+
+    subgraph "Camada de Persistência"
+        PG["🐘 PostgreSQL<br/>Supabase + pgvector"]
+        REDIS_C["💾 Redis Cache<br/>Upstash"]
+        STORAGE["📦 Supabase Storage<br/>PDFs e Documentos"]
+    end
+
+    subgraph "Observabilidade"
+        LS["📈 LangSmith<br/>Tracing de IA"]
+        SENTRY["🚨 Sentry<br/>Error Tracking"]
+    end
+
+    FE -->|"Upload PDF / Consultas"| API
+    API -->|"Autenticação"| AUTH
+    API -->|"Enfileira Job"| QUEUE
+    QUEUE -->|"Consome Job"| WORKER
+    WORKER --> DOCLING
+    WORKER --> PDFP
+    WORKER --> GEMINI_V
+    WORKER -->|"Salva Extração"| PG
+    
+    API -->|"Inicia Análise"| SUPERVISOR
+    SUPERVISOR --> ROUTER
+    ROUTER --> AGENTS
+    AGENTS -->|"Busca Precedentes"| RAG
+    RAG -->|"pgvector Search"| PG
+    AGENTS --> GENERATOR
+    GENERATOR --> VALIDATOR
+    VALIDATOR -->|"Salva Análise"| PG
+    
+    SUPERVISOR -.->|"Trace"| LS
+    AGENTS -.->|"Trace"| LS
+    API -.->|"Errors"| SENTRY
+    FE -.->|"Errors"| SENTRY
+    
+    API -->|"Cache"| REDIS_C
+    API -->|"Arquivos"| STORAGE

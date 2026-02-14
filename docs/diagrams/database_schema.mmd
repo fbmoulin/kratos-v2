@@ -1,0 +1,71 @@
+erDiagram
+    users ||--o{ documents : "uploads"
+    users ||--o{ audit_logs : "generates"
+    documents ||--o{ extractions : "has"
+    extractions ||--o{ analyses : "produces"
+    analyses ||--o{ audit_logs : "logged in"
+    documents ||--o{ audit_logs : "logged in"
+
+    users {
+        uuid id PK
+        string email
+        string role
+        timestamp created_at
+    }
+
+    documents {
+        uuid id PK
+        uuid user_id FK
+        string filename
+        string status
+        int pages
+        int file_size
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    extractions {
+        uuid id PK
+        uuid document_id FK
+        jsonb content_json
+        string extraction_method
+        timestamp created_at
+    }
+
+    analyses {
+        uuid id PK
+        uuid extraction_id FK
+        string agent_chain
+        text reasoning_trace
+        jsonb result_json
+        string model_used
+        timestamp created_at
+    }
+
+    audit_logs {
+        uuid id PK
+        string entity_type
+        uuid entity_id
+        string action
+        jsonb payload_before
+        jsonb payload_after
+        uuid user_id FK
+        timestamp created_at
+    }
+
+    precedents {
+        uuid id PK
+        text content
+        vector embedding
+        jsonb metadata
+        string category
+    }
+
+    prompt_versions {
+        uuid id PK
+        string prompt_key
+        int version
+        text content
+        boolean is_active
+        timestamp created_at
+    }

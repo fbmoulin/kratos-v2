@@ -1,0 +1,43 @@
+version: '3.9'
+
+# ============================================================
+# KRATOS v2 - Docker Compose (Desenvolvimento Local)
+# ============================================================
+# Serviços auxiliares para desenvolvimento local.
+# O banco de dados PostgreSQL é gerenciado pelo Supabase (cloud).
+# ============================================================
+
+services:
+  # Redis - Message Broker para Celery + Cache
+  redis:
+    image: redis:7-alpine
+    container_name: kratos-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Redis Commander - UI para inspecionar Redis (dev only)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: kratos-redis-ui
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - '8081:8081'
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - debug
+
+volumes:
+  redis-data:
+    driver: local

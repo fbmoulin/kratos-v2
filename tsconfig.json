@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@kratos/core": ["packages/core/src"],
+      "@kratos/db": ["packages/db/src"],
+      "@kratos/ai": ["packages/ai/src"],
+      "@kratos/tools": ["packages/tools/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}
