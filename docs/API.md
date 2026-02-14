@@ -1,7 +1,7 @@
 # KRATOS v2 — API Reference
 
 **Base URL:** `http://localhost:3001/v2` (dev) | `https://api.kratos.leg.br/v2` (production)
-**Version:** 2.0.1
+**Version:** 2.1.0
 **Last updated:** 2026-02-14
 
 ---
@@ -41,7 +41,7 @@ In-memory sliding-window rate limiter (MVP). Headers included on all rate-limite
 | `X-RateLimit-Remaining` | Requests remaining in current window |
 | `Retry-After` | Seconds until window resets (only on 429) |
 
-> **Note:** Rate limiter is not yet applied to any routes. Available via `rateLimiter(maxRequests, windowMs)` middleware for Phase 1 integration.
+> **Note:** Rate limiter is not yet applied to any routes. Available via `rateLimiter(maxRequests, windowMs)` middleware for Phase 2 integration.
 
 ---
 
@@ -99,103 +99,155 @@ Readiness probe. Checks downstream dependency connectivity.
 }
 ```
 
-> **Note:** All checks currently return `"pending"` — actual connectivity checks will be implemented in Phase 1.
+> **Note:** All checks currently return `"pending"` — actual connectivity checks will be implemented in Phase 2.
 
 ---
 
 ### Document Endpoints (Authenticated)
 
 All document endpoints require `Authorization: Bearer <token>`.
+All responses use `{ "data": ... }` wrapper for success and `{ "error": { "message": "..." } }` for errors.
 
 ---
 
 #### `GET /v2/documents`
 
-List documents for the authenticated user.
+List documents for the authenticated user (paginated, from database).
+
+**Query parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page` | number | 1 | Page number |
+| `limit` | number | 20 | Items per page |
+| `status` | string | — | Filter by status (`pending`, `processing`, `completed`, `failed`) |
 
 **Response (200):**
 ```json
 {
-  "data": [],
+  "data": [
+    {
+      "id": "c7a8b9d0-...",
+      "userId": "user-uuid",
+      "fileName": "peticao_inicial.pdf",
+      "filePath": "user-uuid/doc-uuid/peticao_inicial.pdf",
+      "fileSize": 2048000,
+      "mimeType": "application/pdf",
+      "status": "completed",
+      "pages": 12,
+      "errorMessage": null,
+      "createdAt": "2026-02-14T20:00:00.000Z",
+      "updatedAt": "2026-02-14T20:01:00.000Z"
+    }
+  ],
   "pagination": {
     "page": 1,
     "limit": 20,
-    "total": 0
+    "total": 1,
+    "totalPages": 1
   }
 }
 ```
-
-> **Note:** Currently returns empty list. DB query integration in Phase 1.
 
 ---
 
 #### `POST /v2/documents`
 
-Upload new document metadata.
+Upload a new PDF document for processing.
 
-**Request body** (`application/json`):
-```json
-{
-  "fileName": "peticao_inicial.pdf",
-  "fileSize": 2048000
-}
-```
-
-**Validation rules:**
+**Request body** (`multipart/form-data`):
 | Field | Type | Rules |
 |-------|------|-------|
-| `fileName` | string | Required, 1-255 chars |
-| `fileSize` | number | Required, positive, max 52,428,800 (50MB) |
+| `file` | File | Required, PDF only (`application/pdf`), max 50MB |
 
 **Response (201):**
 ```json
 {
-  "id": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
-  "fileName": "peticao_inicial.pdf",
-  "fileSize": 2048000,
-  "status": "pending",
-  "createdAt": "2026-02-14T20:00:00.000Z"
+  "data": {
+    "id": "c7a8b9d0-...",
+    "userId": "user-uuid",
+    "fileName": "peticao_inicial.pdf",
+    "filePath": "user-uuid/doc-uuid/peticao_inicial.pdf",
+    "fileSize": 2048000,
+    "mimeType": "application/pdf",
+    "status": "pending",
+    "pages": null,
+    "errorMessage": null,
+    "createdAt": "2026-02-14T20:00:00.000Z",
+    "updatedAt": "2026-02-14T20:00:00.000Z"
+  }
 }
 ```
 
-**Error (400):** Zod validation failure:
+**Error (400):**
 ```json
-{
-  "success": false,
-  "error": { /* Zod error details */ }
-}
+{ "error": { "message": "Only PDF files are allowed" } }
+{ "error": { "message": "File is required" } }
+{ "error": { "message": "File exceeds 50MB limit" } }
 ```
 
-> **Phase 1:** Will accept `multipart/form-data` with actual PDF file, upload to Supabase Storage, and enqueue Celery extraction job.
+**Pipeline:** Upload triggers: Supabase Storage save → `documents` DB row → Redis job enqueue → Python worker extraction.
 
 ---
 
 #### `GET /v2/documents/:id`
 
-Get details for a specific document.
+Get details for a specific document. Returns 404 if not found or not owned by user.
 
 **Response (200):**
 ```json
 {
-  "id": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
-  "status": "pending",
-  "message": "Document endpoint scaffold - implementation pending"
+  "data": {
+    "id": "c7a8b9d0-...",
+    "userId": "user-uuid",
+    "fileName": "peticao_inicial.pdf",
+    "filePath": "user-uuid/doc-uuid/peticao_inicial.pdf",
+    "fileSize": 2048000,
+    "mimeType": "application/pdf",
+    "status": "completed",
+    "pages": 12,
+    "errorMessage": null,
+    "createdAt": "2026-02-14T20:00:00.000Z",
+    "updatedAt": "2026-02-14T20:01:00.000Z"
+  }
 }
+```
+
+**Error (404):**
+```json
+{ "error": { "message": "Document not found" } }
 ```
 
 ---
 
 #### `GET /v2/documents/:id/extraction`
 
-Get extraction results for a processed document.
+Get extraction results for a processed document. Returns 404 if document not found or extraction not complete.
 
 **Response (200):**
 ```json
 {
-  "documentId": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
-  "extraction": null,
-  "message": "Extraction endpoint scaffold - implementation pending"
+  "data": {
+    "id": "ext-uuid",
+    "documentId": "doc-uuid",
+    "contentJson": {
+      "text": "Trata-se de acao de cobranca...",
+      "tables": [{ "headers": ["Valor", "Data"], "rows": [["1000", "2026-01-01"]] }],
+      "images": [],
+      "metadata": { "pages": 12, "method": "pdfplumber" }
+    },
+    "extractionMethod": "pdfplumber",
+    "rawText": "Trata-se de acao de cobranca...",
+    "tablesCount": 1,
+    "imagesCount": 0,
+    "createdAt": "2026-02-14T20:01:00.000Z"
+  }
 }
+```
+
+**Error (404):**
+```json
+{ "error": { "message": "Document not found" } }
+{ "error": { "message": "Extraction not available" } }
 ```
 
 ---
@@ -207,10 +259,10 @@ Queue AI analysis for a document. Returns immediately with tracking ID.
 **Response (202):**
 ```json
 {
-  "documentId": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
-  "analysisId": "f3g4h5i6-j7k8-4l9m-0n1o-2p3q4r5s6t7u",
+  "documentId": "c7a8b9d0-...",
+  "analysisId": "f3g4h5i6-...",
   "status": "queued",
-  "message": "Analysis endpoint scaffold - implementation pending"
+  "message": "Analysis endpoint scaffold - Phase 2"
 }
 ```
 
@@ -223,8 +275,9 @@ Queue AI analysis for a document. Returns immediately with tracking ID.
 | 200 | Success | GET endpoints |
 | 201 | Created | POST /documents |
 | 202 | Accepted (queued) | POST /documents/:id/analyze |
-| 400 | Validation error | POST with invalid body |
+| 400 | Validation error | POST with invalid file/body |
 | 401 | Unauthorized | Missing or invalid JWT |
+| 404 | Not found | Document or extraction not found |
 | 429 | Rate limited | When rate limiter is applied |
 | 500 | Server error | Unexpected failures |
 
@@ -239,11 +292,29 @@ interface Document {
   id: string;          // UUID
   userId: string;      // UUID (from JWT)
   fileName: string;    // Original file name
+  filePath: string;    // Supabase Storage path
   fileSize: number;    // Bytes
+  mimeType: string;    // MIME type (application/pdf)
   status: 'pending' | 'processing' | 'completed' | 'failed';
   pages: number | null;
+  errorMessage: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+```
+
+### Extraction
+
+```typescript
+interface Extraction {
+  id: string;              // UUID
+  documentId: string;      // FK to Document
+  contentJson: object;     // Structured extraction (text, tables, images, metadata)
+  extractionMethod: string; // e.g. "pdfplumber"
+  rawText: string;         // Plain text content
+  tablesCount: number;
+  imagesCount: number;
+  createdAt: Date;
 }
 ```
 
@@ -256,16 +327,6 @@ interface FIRACResult {
   rule: string;        // Applicable legal rules/precedents
   analysis: string;    // Legal reasoning and analysis
   conclusion: string;  // Final recommendation
-}
-```
-
-### ReviewPayload
-
-```typescript
-interface ReviewPayload {
-  action: 'approved' | 'revised' | 'rejected';
-  comments: string;
-  revisedContent?: Record<string, unknown>; // Only for 'revised'
 }
 ```
 
@@ -291,9 +352,14 @@ curl http://localhost:3001/v2/health
 # List documents (requires token)
 curl -H "Authorization: Bearer <token>" http://localhost:3001/v2/documents
 
-# Upload document
+# Upload PDF document
 curl -X POST http://localhost:3001/v2/documents \
   -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"fileName": "test.pdf", "fileSize": 1024}'
+  -F "file=@peticao.pdf"
+
+# Get document details
+curl -H "Authorization: Bearer <token>" http://localhost:3001/v2/documents/<id>
+
+# Get extraction results
+curl -H "Authorization: Bearer <token>" http://localhost:3001/v2/documents/<id>/extraction
 ```
