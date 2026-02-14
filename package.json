@@ -2,6 +2,7 @@
   "name": "kratos-v2",
   "version": "2.0.0",
   "private": true,
+  "type": "module",
   "description": "KRATOS v2 - Knowledge-driven Reasoning and Automated Text Output System",
   "scripts": {
     "dev": "turbo run dev",
@@ -12,11 +13,14 @@
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
+    "eslint": "^9.20.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.3.0",
+    "prettier": "^3.5.0",
     "turbo": "^2.4.0",
     "typescript": "^5.7.0",
-    "prettier": "^3.5.0",
-    "eslint": "^9.20.0",
-    "@types/node": "^22.0.0"
+    "typescript-eslint": "^8.55.0"
   },
   "engines": {
     "node": ">=22.0.0",

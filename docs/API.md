@@ -1,175 +1,299 @@
-_# KRATOS v2 — Documentação da API
+# KRATOS v2 — API Reference
 
-**Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
-**Data**: 14 de Fevereiro de 2026
-**Versão**: 1.0
+**Base URL:** `http://localhost:3001/v2` (dev) | `https://api.kratos.leg.br/v2` (production)
+**Version:** 2.0.1
+**Last updated:** 2026-02-14
 
 ---
 
-## 1. Introdução
+## Authentication
 
-Esta documentação descreve a API RESTful para o sistema **KRATOS v2**, uma plataforma de automação jurídica projetada para processar documentos judiciais e gerar minutas estruturadas. A API é o principal ponto de interação para clientes, como a aplicação web (frontend), e permite o gerenciamento completo do ciclo de vida dos documentos.
+All `/documents` endpoints require a Supabase JWT in the `Authorization` header.
+Health and root endpoints are public.
 
-Todas as requisições e respostas da API utilizam o formato **JSON**. A URL base para todos os endpoints é `https://api.kratos.leg.br/v2`.
-
-## 2. Autenticação
-
-A API KRATOS v2 utiliza autenticação baseada em **JSON Web Tokens (JWT)**, gerenciada pelo Supabase Auth. Para interagir com os endpoints protegidos, o cliente deve primeiro obter um token de acesso e incluí-lo no cabeçalho `Authorization` de cada requisição subsequente.
-
-**Formato do Cabeçalho:**
 ```
-Authorization: Bearer <seu_jwt_token>
+Authorization: Bearer <supabase_jwt_token>
 ```
 
-## 3. Estrutura de Dados (Schemas)
+### Error responses
 
-A seguir estão os principais objetos de dados manipulados pela API.
+| Status | Body | When |
+|--------|------|------|
+| 401 | `{ "error": "Missing or invalid Authorization header" }` | No `Authorization` header or missing `Bearer` prefix |
+| 401 | `{ "error": "Invalid or expired token" }` | JWT is invalid, expired, or revoked |
+| 500 | `{ "error": "Authentication failed" }` | Supabase service unreachable |
 
-### Objeto `Document`
+### Context variables
 
-Representa um documento judicial enviado para processamento.
+After successful auth, route handlers can access:
+- `c.get('userId')` — UUID string
+- `c.get('user')` — Full Supabase User object
 
+---
+
+## Rate Limiting
+
+In-memory sliding-window rate limiter (MVP). Headers included on all rate-limited responses:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests per window |
+| `X-RateLimit-Remaining` | Requests remaining in current window |
+| `Retry-After` | Seconds until window resets (only on 429) |
+
+> **Note:** Rate limiter is not yet applied to any routes. Available via `rateLimiter(maxRequests, windowMs)` middleware for Phase 1 integration.
+
+---
+
+## Endpoints
+
+### Public Endpoints
+
+#### `GET /v2`
+
+Returns API metadata. No authentication required.
+
+**Response (200):**
 ```json
 {
-  "id": "doc_c7a8b9d0e1f2",
-  "userId": "user_a1b2c3d4e5",
-  "fileName": "peticao_inicial.pdf",
-  "fileSize": 2048000,
-  "status": "completed",
-  "pages": 25,
-  "createdAt": "2026-02-14T10:00:00Z",
-  "updatedAt": "2026-02-14T10:05:00Z"
+  "name": "KRATOS v2",
+  "version": "2.0.0",
+  "status": "operational",
+  "timestamp": "2026-02-14T20:00:00.000Z"
 }
 ```
 
-### Objeto `Analysis`
+---
 
-Representa o resultado da análise de um documento por um agente de IA.
+#### `GET /v2/health`
 
+Liveness probe. Returns 200 if the API process is running.
+
+**Response (200):**
 ```json
 {
-  "id": "analysis_f3g4h5i6j7",
-  "documentId": "doc_c7a8b9d0e1f2",
-  "agentChain": "Supervisor -> Roteador -> Agente Cível -> Gerador de Minuta",
-  "reasoningTrace": "O documento foi classificado como de alta complexidade...",
-  "resultJson": {
-    "firac": {
-      "facts": "...",
-      "issue": "...",
-      "rule": "...",
-      "analysis": "...",
-      "conclusion": "..."
-    }
-  },
-  "modelUsed": "Claude Opus 4",
-  "createdAt": "2026-02-14T10:04:00Z"
+  "status": "healthy",
+  "service": "KRATOS v2",
+  "version": "2.0.0",
+  "uptime": 123.456,
+  "timestamp": "2026-02-14T20:00:00.000Z",
+  "environment": "development"
 }
 ```
 
-## 4. Endpoints da API
+---
 
-### 4.1. Documentos
+#### `GET /v2/health/ready`
 
-#### `POST /documents`
+Readiness probe. Checks downstream dependency connectivity.
 
-**Descrição**: Inicia o processamento de um novo documento judicial. O cliente deve enviar o arquivo PDF como `multipart/form-data`. A API responderá imediatamente com os metadados do documento e o status `pending`, enquanto o processamento pesado é enfileirado para execução assíncrona.
-
-**Corpo da Requisição**: `multipart/form-data` com um campo `file` contendo o PDF.
-
-**Resposta de Sucesso (202)**:
+**Response (200):**
 ```json
 {
-  "id": "doc_c7a8b9d0e1f2",
-  "status": "pending",
-  "message": "Document received and queued for processing."
-}
-```
-
-#### `GET /documents`
-
-**Descrição**: Retorna uma lista paginada de todos os documentos enviados pelo usuário autenticado.
-
-**Parâmetros de Query**:
-- `page` (opcional, número, padrão: 1): O número da página a ser retornada.
-- `limit` (opcional, número, padrão: 10): O número de documentos por página.
-
-**Resposta de Sucesso (200)**:
-```json
-{
-  "data": [
-    // Array de objetos Document
-  ],
-  "pagination": {
-    "currentPage": 1,
-    "totalPages": 5,
-    "totalItems": 50
+  "status": "ready",
+  "checks": {
+    "database": "pending",
+    "redis": "pending",
+    "storage": "pending"
   }
 }
 ```
 
-#### `GET /documents/{id}`
+> **Note:** All checks currently return `"pending"` — actual connectivity checks will be implemented in Phase 1.
 
-**Descrição**: Retorna os detalhes de um documento específico, incluindo seu status atual.
+---
 
-**Parâmetros de URL**:
-- `id` (string, obrigatório): O ID do documento.
+### Document Endpoints (Authenticated)
 
-**Resposta de Sucesso (200)**: Retorna um objeto `Document`.
+All document endpoints require `Authorization: Bearer <token>`.
 
-### 4.2. Análises
+---
 
-#### `GET /documents/{documentId}/analysis`
+#### `GET /v2/documents`
 
-**Descrição**: Retorna o resultado da análise de IA para um documento que já foi processado (`status: "completed"`).
+List documents for the authenticated user.
 
-**Parâmetros de URL**:
-- `documentId` (string, obrigatório): O ID do documento.
-
-**Resposta de Sucesso (200)**: Retorna um objeto `Analysis`.
-
-#### `POST /analysis/{id}/review`
-
-**Descrição**: Submete o resultado de uma revisão humana (HITL) para uma análise de IA. Esta ação é final e permite a exportação do documento.
-
-**Parâmetros de URL**:
-- `id` (string, obrigatório): O ID da análise.
-
-**Corpo da Requisição**:
+**Response (200):**
 ```json
 {
-  "action": "approved", // ou "rejected", "revised"
-  "comments": "A análise está correta, mas ajuste a conclusão para incluir o precedente X.",
-  "revisedContent": { ... } // Opcional, se a ação for "revised"
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 0
+  }
 }
 ```
 
-**Resposta de Sucesso (200)**:
+> **Note:** Currently returns empty list. DB query integration in Phase 1.
+
+---
+
+#### `POST /v2/documents`
+
+Upload new document metadata.
+
+**Request body** (`application/json`):
 ```json
 {
-  "message": "Review submitted successfully."
+  "fileName": "peticao_inicial.pdf",
+  "fileSize": 2048000
 }
 ```
 
-### 4.3. Exportação
+**Validation rules:**
+| Field | Type | Rules |
+|-------|------|-------|
+| `fileName` | string | Required, 1-255 chars |
+| `fileSize` | number | Required, positive, max 52,428,800 (50MB) |
 
-#### `GET /analysis/{id}/export`
+**Response (201):**
+```json
+{
+  "id": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
+  "fileName": "peticao_inicial.pdf",
+  "fileSize": 2048000,
+  "status": "pending",
+  "createdAt": "2026-02-14T20:00:00.000Z"
+}
+```
 
-**Descrição**: Gera e baixa a minuta jurídica final em formato `.docx`, mas somente após a análise ter sido aprovada através do endpoint de revisão.
+**Error (400):** Zod validation failure:
+```json
+{
+  "success": false,
+  "error": { /* Zod error details */ }
+}
+```
 
-**Parâmetros de URL**:
-- `id` (string, obrigatório): O ID da análise aprovada.
+> **Phase 1:** Will accept `multipart/form-data` with actual PDF file, upload to Supabase Storage, and enqueue Celery extraction job.
 
-**Resposta de Sucesso (200)**: Retorna o arquivo `.docx` para download.
+---
 
-## 5. Códigos de Status HTTP
+#### `GET /v2/documents/:id`
 
-A API utiliza os seguintes códigos de status HTTP:
+Get details for a specific document.
 
-- **200 OK**: A requisição foi bem-sucedida.
-- **201 Created**: O recurso foi criado com sucesso (não utilizado nesta versão da API).
-- **202 Accepted**: A requisição foi aceita para processamento, mas a conclusão ainda não está disponível.
-- **400 Bad Request**: A requisição é inválida (ex: JSON malformado, parâmetros ausentes).
-- **401 Unauthorized**: O token de autenticação é inválido ou está ausente.
-- **403 Forbidden**: O usuário não tem permissão para acessar o recurso.
-- **404 Not Found**: O recurso solicitado não foi encontrado.
-- **500 Internal Server Error**: Ocorreu um erro inesperado no servidor.
+**Response (200):**
+```json
+{
+  "id": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
+  "status": "pending",
+  "message": "Document endpoint scaffold - implementation pending"
+}
+```
+
+---
+
+#### `GET /v2/documents/:id/extraction`
+
+Get extraction results for a processed document.
+
+**Response (200):**
+```json
+{
+  "documentId": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
+  "extraction": null,
+  "message": "Extraction endpoint scaffold - implementation pending"
+}
+```
+
+---
+
+#### `POST /v2/documents/:id/analyze`
+
+Queue AI analysis for a document. Returns immediately with tracking ID.
+
+**Response (202):**
+```json
+{
+  "documentId": "c7a8b9d0-e1f2-4a5b-8c9d-0e1f2a3b4c5d",
+  "analysisId": "f3g4h5i6-j7k8-4l9m-0n1o-2p3q4r5s6t7u",
+  "status": "queued",
+  "message": "Analysis endpoint scaffold - implementation pending"
+}
+```
+
+---
+
+## HTTP Status Codes
+
+| Code | Meaning | Used by |
+|------|---------|---------|
+| 200 | Success | GET endpoints |
+| 201 | Created | POST /documents |
+| 202 | Accepted (queued) | POST /documents/:id/analyze |
+| 400 | Validation error | POST with invalid body |
+| 401 | Unauthorized | Missing or invalid JWT |
+| 429 | Rate limited | When rate limiter is applied |
+| 500 | Server error | Unexpected failures |
+
+---
+
+## Data Schemas
+
+### Document
+
+```typescript
+interface Document {
+  id: string;          // UUID
+  userId: string;      // UUID (from JWT)
+  fileName: string;    // Original file name
+  fileSize: number;    // Bytes
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  pages: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### FIRACResult
+
+```typescript
+interface FIRACResult {
+  facts: string;       // Extracted facts from the document
+  issue: string;       // Legal issue identified
+  rule: string;        // Applicable legal rules/precedents
+  analysis: string;    // Legal reasoning and analysis
+  conclusion: string;  // Final recommendation
+}
+```
+
+### ReviewPayload
+
+```typescript
+interface ReviewPayload {
+  action: 'approved' | 'revised' | 'rejected';
+  comments: string;
+  revisedContent?: Record<string, unknown>; // Only for 'revised'
+}
+```
+
+---
+
+## Middleware Chain
+
+Requests pass through middleware in this order:
+
+1. **Logger** — Logs `<-- METHOD /path` and `--> METHOD /path STATUS Xms`
+2. **Secure Headers** — Sets `X-Content-Type-Options`, `X-Frame-Options`, etc.
+3. **CORS** — Allows origin from `CORS_ORIGIN` env (default: `http://localhost:5173`)
+4. **Auth** _(documents only)_ — Validates Supabase JWT, sets `user`/`userId` on context
+
+---
+
+## Testing
+
+```bash
+# Health check (no auth)
+curl http://localhost:3001/v2/health
+
+# List documents (requires token)
+curl -H "Authorization: Bearer <token>" http://localhost:3001/v2/documents
+
+# Upload document
+curl -X POST http://localhost:3001/v2/documents \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"fileName": "test.pdf", "fileSize": 1024}'
+```

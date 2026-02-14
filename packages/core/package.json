@@ -13,10 +13,11 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
-    "test": "echo \"No tests yet\"",
+    "test": "vitest run",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }

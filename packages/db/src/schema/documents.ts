@@ -1,3 +1,18 @@
+/**
+ * @module schema/documents
+ * Drizzle ORM schema definitions for all KRATOS v2 database tables.
+ *
+ * Tables:
+ * - {@link documents} — Uploaded PDF files and their processing status
+ * - {@link extractions} — Structured content extracted from PDFs
+ * - {@link analyses} — AI-generated legal analyses (FIRAC framework)
+ * - {@link precedents} — Legal precedents with pgvector embeddings for RAG
+ * - {@link promptVersions} — Versioned prompt templates for AI agents
+ * - {@link auditLogs} — Immutable audit trail (CNJ 615/2025 compliance)
+ *
+ * All tables use UUID primary keys with `defaultRandom()` and
+ * timezone-aware timestamps with `defaultNow()`.
+ */
 import {
   pgTable,
   uuid,
@@ -9,11 +24,44 @@ import {
   boolean,
   index,
   unique,
+  customType,
 } from 'drizzle-orm/pg-core';
 
+/**
+ * Custom Drizzle type for pgvector `vector(1536)` columns.
+ * Matches OpenAI text-embedding-3-small default dimension.
+ *
+ * Serialization: `number[]` in TS ↔ `vector(1536)` in PostgreSQL.
+ * - `toDriver`: JSON.stringify (pgvector accepts JSON array strings)
+ * - `fromDriver`: JSON.parse or passthrough (depends on driver format)
+ *
+ * @requires pgvector extension enabled in PostgreSQL
+ */
+const vector = customType<{ data: number[]; dpiType: string }>({
+  dataType() {
+    return 'vector(1536)';
+  },
+  toDriver(value: number[]) {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: unknown) {
+    if (typeof value === 'string') return JSON.parse(value);
+    return value as number[];
+  },
+});
+
 // ============================================================
-// Documents
+// Documents — uploaded PDFs and their lifecycle
 // ============================================================
+
+/**
+ * Core document table tracking uploaded PDF files through their processing lifecycle.
+ *
+ * Status flow: `pending` → `processing` → `completed` | `failed`
+ *
+ * @index idx_documents_user_id — fast lookup by owner
+ * @index idx_documents_status — filter by processing stage
+ */
 export const documents = pgTable(
   'documents',
   {
@@ -36,8 +84,17 @@ export const documents = pgTable(
 );
 
 // ============================================================
-// Extractions
+// Extractions — structured content from PDF pipeline
 // ============================================================
+
+/**
+ * Stores structured content extracted from documents by the PDF pipeline.
+ * Each document has exactly one extraction (1:1 via `documentId` FK).
+ *
+ * Pipeline: Docling (structural) → pdfplumber (tables) → Gemini 2.5 Flash (OCR)
+ *
+ * @cascade Deleting a document cascades to its extraction
+ */
 export const extractions = pgTable(
   'extractions',
   {
@@ -58,8 +115,15 @@ export const extractions = pgTable(
 );
 
 // ============================================================
-// Analyses
+// Analyses — AI-generated legal analysis (FIRAC)
 // ============================================================
+
+/**
+ * Stores LangGraph agent analysis results.
+ * Tracks the full agent chain, reasoning trace, and token usage for cost monitoring.
+ *
+ * @cascade Deleting an extraction cascades to its analyses
+ */
 export const analyses = pgTable(
   'analyses',
   {
@@ -80,14 +144,23 @@ export const analyses = pgTable(
 );
 
 // ============================================================
-// Precedents (com pgvector)
+// Precedents — legal precedents with pgvector embeddings
 // ============================================================
+
+/**
+ * Legal precedent knowledge base for RAG (Retrieval-Augmented Generation).
+ *
+ * The `embedding` column stores 1536-dimensional vectors (OpenAI text-embedding-3-small)
+ * for similarity search via pgvector's HNSW index.
+ *
+ * Categories map to `LegalMatter` enum in `@kratos/core`.
+ */
 export const precedents = pgTable(
   'precedents',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     content: text('content').notNull(),
-    // embedding é gerenciado via SQL direto (pgvector)
+    embedding: vector('embedding'),
     metadata: jsonb('metadata').default({}),
     category: varchar('category', { length: 50 }).notNull(),
     source: varchar('source', { length: 255 }),
@@ -97,8 +170,15 @@ export const precedents = pgTable(
 );
 
 // ============================================================
-// Prompt Versions
+// Prompt Versions — versioned AI prompt templates
 // ============================================================
+
+/**
+ * Versioned prompt templates for AI agent instructions.
+ * Supports A/B testing by toggling `isActive` across versions.
+ *
+ * @unique (promptKey, version) — each prompt can have multiple versions
+ */
 export const promptVersions = pgTable(
   'prompt_versions',
   {
@@ -116,8 +196,17 @@ export const promptVersions = pgTable(
 );
 
 // ============================================================
-// Audit Logs
+// Audit Logs — immutable compliance trail
 // ============================================================
+
+/**
+ * Immutable audit log for all system actions.
+ * Required for CNJ Resolution 615/2025 compliance — every AI decision
+ * must have a traceable, non-editable record.
+ *
+ * Records before/after state for entity mutations.
+ * `userId` is nullable to support system-initiated actions.
+ */
 export const auditLogs = pgTable(
   'audit_logs',
   {
