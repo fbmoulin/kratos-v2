@@ -1,10 +1,12 @@
 # KRATOS v2 - PDF Worker Dependencies
-celery[redis]==5.4.*
-docling==2.*
+redis==5.*
 pdfplumber==0.11.*
-google-genai==1.*
 pydantic==2.*
 supabase==2.*
 python-dotenv==1.*
-sentry-sdk[celery]==2.*
+sentry-sdk==2.*
 ruff==0.9.*
+
+# Testing
+pytest==8.*
+pytest-mock==3.*

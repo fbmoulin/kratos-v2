@@ -1,63 +1,101 @@
 """
-KRATOS v2 - Task de Extração de PDF
-Pipeline: Docling (estrutural) + pdfplumber (tabelas) + Gemini Vision (OCR)
+KRATOS v2 - PDF Extraction Worker
+Consumes jobs from Redis list, downloads PDF, extracts content, saves to DB.
 """
 
+import json
 import logging
-from typing import Any
+import os
+import time
 
-from src.celery_app import app
+import redis
 
-logger = logging.getLogger(__name__)
+from src.models.extraction import ExtractionResult
+from src.services.database import DatabaseService
+from src.services.pdf_extraction import PdfExtractionService
+from src.services.storage import StorageService
 
-
-@app.task(
-    bind=True,
-    name="kratos.extract_pdf",
-    max_retries=3,
-    default_retry_delay=30,
-    acks_late=True,
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-def extract_pdf(self, document_id: str, file_path: str) -> dict[str, Any]:
-    """
-    Task principal de extração de PDF.
+logger = logging.getLogger("kratos.pdf-worker")
 
-    Pipeline:
-    1. Download do PDF do Supabase Storage
-    2. Extração estrutural com Docling (IBM)
-    3. Extração de tabelas com pdfplumber
-    4. OCR de imagens com Gemini 2.5 Flash Vision
-    5. Merge dos resultados
-    6. Validação com Pydantic
-    7. Salvar no banco de dados
-    """
-    logger.info(f"Iniciando extração do documento {document_id}")
+QUEUE_KEY = "kratos:jobs:pdf"
+
+
+def process_pdf_job(job: dict):
+    """Process a single PDF extraction job."""
+    document_id = job["documentId"]
+    file_path = job["filePath"]
+
+    storage = StorageService()
+    extractor = PdfExtractionService()
+    db = DatabaseService()
 
     try:
-        # TODO: Fase 1 - Implementar pipeline completo
-        # Step 1: Download do PDF
-        # Step 2: Docling extraction
-        # Step 3: pdfplumber tables
-        # Step 4: Gemini Vision OCR
-        # Step 5: Merge results
-        # Step 6: Validate with Pydantic
-        # Step 7: Save to DB
+        logger.info(f"Processing document {document_id}")
 
-        result = {
-            "document_id": document_id,
-            "status": "completed",
-            "extraction_method": "docling+pdfplumber+gemini",
-            "content": {},
-            "metadata": {
-                "pages": 0,
-                "tables_found": 0,
-                "images_found": 0,
-            },
-        }
+        # 1. Download PDF from Supabase Storage
+        pdf_bytes = storage.download_pdf(file_path)
+        logger.info(f"Downloaded {len(pdf_bytes)} bytes for {document_id}")
 
-        logger.info(f"Extração do documento {document_id} concluída com sucesso")
-        return result
+        # 2. Extract content
+        raw_result = extractor.extract(pdf_bytes)
 
-    except Exception as exc:
-        logger.error(f"Erro na extração do documento {document_id}: {exc}")
-        raise self.retry(exc=exc)
+        # 3. Validate with Pydantic
+        validated = ExtractionResult(**raw_result)
+
+        # 4. Save extraction to DB
+        db.save_extraction(
+            document_id=document_id,
+            content_json=validated.model_dump(),
+            extraction_method=validated.metadata.get("method", "pdfplumber"),
+            raw_text=validated.text,
+            tables_count=len(validated.tables),
+            images_count=len(validated.images),
+        )
+
+        # 5. Update document status
+        db.update_document_status(
+            document_id,
+            "completed",
+            pages=validated.metadata.get("pages", 0),
+        )
+
+        logger.info(f"Completed document {document_id}")
+
+    except Exception as e:
+        logger.error(f"Failed document {document_id}: {e}")
+        try:
+            db.update_document_status(
+                document_id, "failed", error_message=str(e)
+            )
+        except Exception as db_err:
+            logger.error(f"Failed to update status for {document_id}: {db_err}")
+
+
+def worker_loop():
+    """Main loop — blocks on Redis BRPOP, processes jobs one at a time."""
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    r = redis.from_url(redis_url)
+
+    logger.info(f"PDF worker started, listening on {QUEUE_KEY}")
+
+    while True:
+        try:
+            result = r.brpop(QUEUE_KEY, timeout=5)
+            if result:
+                _, job_json = result
+                job = json.loads(job_json)
+                process_pdf_job(job)
+        except KeyboardInterrupt:
+            logger.info("Worker shutting down")
+            break
+        except Exception as e:
+            logger.error(f"Worker loop error: {e}")
+            time.sleep(1)
+
+
+if __name__ == "__main__":
+    worker_loop()
