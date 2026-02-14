@@ -1,12 +1,28 @@
 import { describe, test, expect, vi } from 'vitest';
 
-// Mock Supabase to avoid requiring env vars at import time
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: new Error('mock') }),
     },
+    storage: { from: () => ({ upload: vi.fn(), createSignedUrl: vi.fn(), getPublicUrl: vi.fn() }) },
   }),
+}));
+
+vi.mock('../services/storage.js', () => ({
+  storageService: { uploadDocument: vi.fn(), getSignedUrl: vi.fn() },
+}));
+
+vi.mock('../services/queue.js', () => ({
+  queueService: { enqueuePdfExtraction: vi.fn() },
+}));
+
+vi.mock('../services/document-repo.js', () => ({
+  documentRepo: { listByUser: vi.fn(), getById: vi.fn(), create: vi.fn(), getExtraction: vi.fn() },
+}));
+
+vi.mock('ioredis', () => ({
+  default: vi.fn(() => ({ lpush: vi.fn() })),
 }));
 
 const { default: app } = await import('../index.js');

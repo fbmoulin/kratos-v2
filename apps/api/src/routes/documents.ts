@@ -1,121 +1,98 @@
-/**
- * @module routes/documents
- * Document management endpoints — upload, list, detail, extraction, and analysis.
- *
- * All routes require authentication via `authMiddleware` (applied in index.ts).
- * The `userId` from the JWT is available via `c.get('userId')` in all handlers.
- *
- * Current implementation returns scaffold responses. Phase 1 will integrate
- * Supabase Storage for uploads and the Celery worker for PDF processing.
- *
- * @route GET  /v2/documents          - List user's documents (paginated)
- * @route POST /v2/documents          - Upload new document (JSON metadata)
- * @route GET  /v2/documents/:id      - Get document details
- * @route GET  /v2/documents/:id/extraction - Get extraction results
- * @route POST /v2/documents/:id/analyze    - Queue AI analysis
- */
 import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { DocumentStatus } from '@kratos/core';
+import { storageService } from '../services/storage.js';
+import { queueService } from '../services/queue.js';
+import { documentRepo } from '../services/document-repo.js';
 
 export const documentsRouter = new Hono();
 
-/**
- * Zod schema for document upload request body.
- * Validates file metadata before processing.
- *
- * @property fileName - Original file name (1-255 chars)
- * @property fileSize - File size in bytes (max 50MB)
- */
-const uploadSchema = z.object({
-  fileName: z.string().min(1).max(255),
-  fileSize: z.number().positive().max(50 * 1024 * 1024), // Max 50MB
-});
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-/**
- * List all documents for the authenticated user.
- * Returns paginated results with metadata.
- *
- * @todo Query `documents` table filtered by `c.get('userId')`
- * @todo Add query params for page, limit, status filter
- */
 documentsRouter.get('/', async (c) => {
-  return c.json({
-    data: [],
-    pagination: {
-      page: 1,
-      limit: 20,
-      total: 0,
-    },
+  const userId = c.get('userId');
+  const page = parseInt(c.req.query('page') || '1');
+  const limit = parseInt(c.req.query('limit') || '20');
+  const status = c.req.query('status');
+
+  const result = await documentRepo.listByUser(userId, page, limit, status);
+  return c.json(result);
+});
+
+documentsRouter.post('/', async (c) => {
+  const userId = c.get('userId');
+  const body = await c.req.parseBody();
+
+  const file = body['file'];
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: { message: 'File is required' } }, 400);
+  }
+
+  if (file.type !== 'application/pdf') {
+    return c.json({ error: { message: 'Only PDF files are allowed' } }, 400);
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    return c.json({ error: { message: 'File exceeds 50MB limit' } }, 400);
+  }
+
+  const documentId = crypto.randomUUID();
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+  const { path } = await storageService.uploadDocument({
+    userId,
+    documentId,
+    fileName: file.name,
+    fileBuffer,
+    mimeType: file.type,
   });
+
+  const doc = await documentRepo.create({
+    id: documentId,
+    userId,
+    fileName: file.name,
+    filePath: path,
+    fileSize: file.size,
+    mimeType: file.type,
+  });
+
+  await queueService.enqueuePdfExtraction({
+    documentId: doc.id,
+    userId: doc.userId,
+    filePath: doc.filePath!,
+    fileName: doc.fileName,
+  });
+
+  return c.json({ data: doc }, 201);
 });
 
-/**
- * Upload a new document for processing.
- * Validates metadata via Zod, returns 201 with document stub.
- *
- * @todo Upload PDF to Supabase Storage
- * @todo Insert row into `documents` table
- * @todo Enqueue Celery job for PDF extraction
- */
-documentsRouter.post('/', zValidator('json', uploadSchema), async (c) => {
-  const body = c.req.valid('json');
-
-  return c.json(
-    {
-      id: crypto.randomUUID(),
-      fileName: body.fileName,
-      fileSize: body.fileSize,
-      status: DocumentStatus.PENDING,
-      createdAt: new Date().toISOString(),
-    },
-    201,
-  );
-});
-
-/**
- * Get details for a specific document by ID.
- *
- * @todo Query `documents` table by ID + userId
- * @todo Return 404 if not found or not owned by user
- */
 documentsRouter.get('/:id', async (c) => {
+  const userId = c.get('userId');
   const id = c.req.param('id');
 
-  return c.json({
-    id,
-    status: DocumentStatus.PENDING,
-    message: 'Document endpoint scaffold - implementation pending',
-  });
+  const doc = await documentRepo.getById(userId, id);
+  if (!doc) {
+    return c.json({ error: { message: 'Document not found' } }, 404);
+  }
+
+  return c.json({ data: doc });
 });
 
-/**
- * Get extraction results for a processed document.
- * Returns the structured content extracted by the PDF pipeline.
- *
- * @todo Query `extractions` table by documentId
- * @todo Return 404 if document not found or extraction not complete
- */
 documentsRouter.get('/:id/extraction', async (c) => {
+  const userId = c.get('userId');
   const id = c.req.param('id');
 
-  return c.json({
-    documentId: id,
-    extraction: null,
-    message: 'Extraction endpoint scaffold - implementation pending',
-  });
+  const doc = await documentRepo.getById(userId, id);
+  if (!doc) {
+    return c.json({ error: { message: 'Document not found' } }, 404);
+  }
+
+  const extraction = await documentRepo.getExtraction(id);
+  if (!extraction) {
+    return c.json({ error: { message: 'Extraction not available' } }, 404);
+  }
+
+  return c.json({ data: extraction });
 });
 
-/**
- * Initiate AI analysis on a processed document.
- * Queues the document for LangGraph agent processing.
- * Returns 202 Accepted with analysis tracking ID.
- *
- * @todo Validate document exists and extraction is complete
- * @todo Invoke LangGraph agent orchestration
- * @todo Return analysis tracking ID for polling
- */
 documentsRouter.post('/:id/analyze', async (c) => {
   const id = c.req.param('id');
 
@@ -124,7 +101,7 @@ documentsRouter.post('/:id/analyze', async (c) => {
       documentId: id,
       analysisId: crypto.randomUUID(),
       status: 'queued',
-      message: 'Analysis endpoint scaffold - implementation pending',
+      message: 'Analysis endpoint scaffold - Phase 2',
     },
     202,
   );
