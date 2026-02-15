@@ -32,6 +32,9 @@ import { APP_NAME, APP_VERSION } from '@kratos/core';
 import { healthRouter } from './routes/health.js';
 import { documentsRouter } from './routes/documents.js';
 import { authMiddleware } from './middleware/auth.js';
+import { initSentry, captureError } from './middleware/sentry.js';
+
+initSentry();
 
 const app = new Hono().basePath('/v2');
 
@@ -63,6 +66,13 @@ app.get('/', (c) => {
     status: 'operational',
     timestamp: new Date().toISOString(),
   });
+});
+
+// Global error handler — captures to Sentry and returns a generic 500
+app.onError((err, c) => {
+  captureError(err, { path: c.req.path, method: c.req.method });
+  console.error(`[ERROR] ${c.req.method} ${c.req.path}:`, err.message);
+  return c.json({ error: 'Internal server error' }, 500);
 });
 
 // Start server (skipped during tests to allow `app.request()` testing)
