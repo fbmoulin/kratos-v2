@@ -153,6 +153,39 @@ export interface ReviewPayload {
 }
 
 // ============================================================
+// Phase 2 — AI Orchestration Types
+// ============================================================
+
+/** Decision type classification for judicial documents. */
+export enum DecisionType {
+  /** Provisional injunctive relief */
+  LIMINAR = 'liminar',
+  /** Final judgment on merits */
+  SENTENCA = 'sentenca',
+  /** Procedural order (non-substantive) */
+  DESPACHO = 'despacho',
+  /** Appellate court decision */
+  ACORDAO = 'acordao',
+}
+
+/** Result from the router agent: classification + model selection. */
+export interface RouterResult {
+  legalMatter: LegalMatter;
+  decisionType: DecisionType;
+  complexity: number;
+  confidence: number;
+  selectedModel: AIModel;
+  reasoning: string;
+}
+
+/** Combined RAG context from vector + graph search with RRF fusion. */
+export interface RAGContext {
+  vectorResults: Array<{ content: string; score: number; source: string }>;
+  graphResults: Array<{ content: string; score: number; path: string[] }>;
+  fusedResults: Array<{ content: string; score: number; source: string }>;
+}
+
+// ============================================================
 // Constants
 // ============================================================
 
