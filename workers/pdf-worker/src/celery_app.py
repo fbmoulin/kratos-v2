@@ -1,19 +1,16 @@
 """
-KRATOS v2 - PDF Worker (Celery)
-Processamento assíncrono de documentos PDF.
+KRATOS v2 — PDF Worker (Celery)
+Processamento assincrono de documentos PDF.
 """
 
-import os
 from celery import Celery
 
-# Configuração do Celery
-BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+from src.config import settings
 
 app = Celery(
     "kratos_pdf_worker",
-    broker=BROKER_URL,
-    backend=RESULT_BACKEND,
+    broker=settings.celery_broker_url,
+    backend=settings.celery_result_backend,
 )
 
 app.conf.update(
@@ -25,11 +22,10 @@ app.conf.update(
     task_track_started=True,
     task_acks_late=True,
     worker_prefetch_multiplier=1,
-    task_soft_time_limit=120,  # 2 minutos soft limit
-    task_time_limit=180,  # 3 minutos hard limit
+    task_soft_time_limit=120,
+    task_time_limit=settings.task_timeout_seconds,
     task_default_retry_delay=30,
     task_max_retries=3,
 )
 
-# Auto-discover tasks
 app.autodiscover_tasks(["src.tasks"])
