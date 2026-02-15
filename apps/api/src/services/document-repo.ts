@@ -67,6 +67,16 @@ export const documentRepo = {
     return doc;
   },
 
+  async updateStatus(userId: string, documentId: string, status: string) {
+    const [doc] = await db
+      .update(documents)
+      .set({ status, updatedAt: new Date() })
+      .where(and(eq(documents.id, documentId), eq(documents.userId, userId)))
+      .returning();
+
+    return doc ?? null;
+  },
+
   async getExtraction(documentId: string) {
     const [extraction] = await db
       .select()

@@ -1,16 +1,77 @@
-const APP_NAME = 'KRATOS v2';
-const APP_VERSION = '2.0.0';
+import { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
+import { AuthGuard } from '@/components/layout/AuthGuard';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
+
+const Login = lazy(() => import('@/pages/Login'));
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const DocumentDetail = lazy(() => import('@/pages/DocumentDetail'));
+const Review = lazy(() => import('@/pages/Review'));
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+});
+
+function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="h-screen flex bg-(--color-bg)">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="min-h-screen bg-(--color-bg) flex items-center justify-center">
+      <div className="animate-spin h-8 w-8 border-2 border-(--color-primary) border-t-transparent rounded-full" />
+    </div>
+  );
+}
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900">{APP_NAME}</h1>
-        <p className="mt-2 text-gray-600">v{APP_VERSION}</p>
-        <p className="mt-4 text-sm text-gray-500">
-          Plataforma de Automação Jurídica com IA
-        </p>
-      </div>
-    </div>
+    <ThemeProvider attribute="class" defaultTheme="dark">
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <AuthGuard>
+                    <AppLayout><Dashboard /></AppLayout>
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/documents/:id"
+                element={
+                  <AuthGuard>
+                    <AppLayout><DocumentDetail /></AppLayout>
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/documents/:id/review"
+                element={
+                  <AuthGuard>
+                    <AppLayout><Review /></AppLayout>
+                  </AuthGuard>
+                }
+              />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
