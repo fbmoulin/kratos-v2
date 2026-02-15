@@ -78,3 +78,29 @@ Estas variáveis são opcionais e usadas apenas para testes end-to-end em desenv
 | :--- | :--- | :--- |
 | `TEST_USER_ID` | UUID de um usuário fictício para bypass de autenticação em dev. Só funciona quando `NODE_ENV=development`. | `00000000-0000-0000-0000-000000000001` |
 | `API_BASE_URL` | URL base da API para o script E2E. | `http://localhost:3001` |
+| `E2E_USER_EMAIL` | Email do usuário de teste para Playwright E2E. | `test@example.com` |
+| `E2E_USER_PASSWORD` | Senha do usuário de teste para Playwright E2E. | `testpassword123` |
+
+---
+
+## 7. Variáveis de Monitoramento (Sentry)
+
+| Variável | Descrição | Exemplo de Valor |
+| :--- | :--- | :--- |
+| `SENTRY_DSN` | DSN do Sentry para o backend (Node.js). Captura exceptions no `app.onError`. | `https://xxx@o0.ingest.sentry.io/0` |
+| `VITE_SENTRY_DSN` | DSN do Sentry para o frontend (React). Prefixo `VITE_` expõe ao navegador. | `https://xxx@o0.ingest.sentry.io/0` |
+
+---
+
+## 8. Variáveis de Deploy (CI/CD)
+
+Estas variáveis devem ser configuradas como **GitHub Secrets** no repositório. Não são necessárias para desenvolvimento local.
+
+| Variável | Descrição | Onde Configurar |
+| :--- | :--- | :--- |
+| `VERCEL_TOKEN` | Token de API do Vercel para deploy do frontend. | GitHub Secrets |
+| `VERCEL_ORG_ID` | ID da organização no Vercel. | GitHub Secrets |
+| `VERCEL_PROJECT_ID` | ID do projeto no Vercel. | GitHub Secrets |
+| `FLY_API_TOKEN` | Token de API do Fly.io para deploy da API. | GitHub Secrets |
+| `STAGING_API_URL` | URL da API em staging (para build do frontend). | GitHub Secrets |
+| `PRODUCTION_API_URL` | URL da API em produção (para build do frontend). | GitHub Secrets |

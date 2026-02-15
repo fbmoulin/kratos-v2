@@ -11,7 +11,7 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.*', 'src/**/*.spec.*', 'src/test/**', 'src/integration/**'],
+      exclude: ['src/**/*.test.*', 'src/**/*.spec.*', 'src/test/**', 'src/client.ts', 'src/migrate.ts'],
       thresholds: {
         statements: 60,
         branches: 50,
@@ -23,7 +23,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@kratos/core': path.resolve(__dirname, '../core/src/index.ts'),
-      '@kratos/db': path.resolve(__dirname, '../db/src/index.ts'),
     },
   },
 });
