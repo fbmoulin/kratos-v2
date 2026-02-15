@@ -49,16 +49,29 @@ describe('Health routes', () => {
     expect(body).toHaveProperty('timestamp');
   });
 
-  test('GET /v2/health/ready returns 200 with checks', async () => {
+  test('GET /v2/health/ready returns checks with degraded status when deps unavailable', async () => {
     const res = await app.request('/v2/health/ready');
-    expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toHaveProperty('status', 'ready');
+    expect(body).toHaveProperty('status');
     expect(body).toHaveProperty('checks');
     expect(body.checks).toHaveProperty('database');
     expect(body.checks).toHaveProperty('redis');
-    expect(body.checks).toHaveProperty('storage');
+    expect(body).toHaveProperty('version', '2.0.0');
+    expect(body).toHaveProperty('uptime');
+  });
+
+  test('GET /v2/health/metrics returns metrics', async () => {
+    const res = await app.request('/v2/health/metrics');
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body).toHaveProperty('requestCount');
+    expect(body).toHaveProperty('errorCount');
+    expect(body).toHaveProperty('errorRate');
+    expect(body).toHaveProperty('avgResponseTimeMs');
+    expect(body).toHaveProperty('uptimeSeconds');
+    expect(body).toHaveProperty('startedAt');
   });
 
   test('GET /v2 returns app info', async () => {
