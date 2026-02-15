@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { storageService } from '../services/storage.js';
 import { queueService } from '../services/queue.js';
 import { documentRepo } from '../services/document-repo.js';
+import { analysisRepo } from '../services/analysis-repo.js';
+import { createAnalysisWorkflow, createInitialState } from '@kratos/ai';
 
 export const documentsRouter = new Hono();
 
@@ -94,15 +96,66 @@ documentsRouter.get('/:id/extraction', async (c) => {
 });
 
 documentsRouter.post('/:id/analyze', async (c) => {
+  const userId = c.get('userId');
   const id = c.req.param('id');
 
-  return c.json(
-    {
-      documentId: id,
-      analysisId: crypto.randomUUID(),
-      status: 'queued',
-      message: 'Analysis endpoint scaffold - Phase 2',
+  // Validate document exists and belongs to user
+  const doc = await documentRepo.getById(userId, id);
+  if (!doc) {
+    return c.json({ error: { message: 'Document not found' } }, 404);
+  }
+
+  // Validate extraction exists
+  const extraction = await documentRepo.getExtraction(id);
+  if (!extraction) {
+    return c.json({ error: { message: 'Extraction not available. Document must be processed first.' } }, 400);
+  }
+
+  // Run LangGraph analysis workflow
+  const rawText = extraction.rawText || JSON.stringify(extraction.contentJson);
+  const workflow = createAnalysisWorkflow();
+  const initialState = createInitialState({
+    extractionId: extraction.id,
+    documentId: id,
+    userId,
+    rawText,
+  });
+
+  const finalState = await workflow.invoke(initialState);
+
+  // Check for workflow errors
+  if (finalState.error) {
+    return c.json({ error: { message: `Analysis failed: ${finalState.error}` } }, 500);
+  }
+
+  // Persist analysis
+  const analysis = await analysisRepo.create({
+    extractionId: extraction.id,
+    agentChain: 'supervisor→router→rag→specialist',
+    reasoningTrace: finalState.routerResult?.reasoning ?? null,
+    resultJson: {
+      firacResult: finalState.firacResult,
+      draftResult: finalState.draftResult,
+      routerResult: finalState.routerResult,
     },
-    202,
-  );
+    modelUsed: finalState.modelUsed ?? 'unknown',
+    tokensInput: finalState.tokensInput,
+    tokensOutput: finalState.tokensOutput,
+    latencyMs: finalState.latencyMs,
+  });
+
+  return c.json({
+    data: {
+      analysisId: analysis.id,
+      firacResult: finalState.firacResult,
+      draftResult: finalState.draftResult,
+      routerResult: finalState.routerResult,
+      modelUsed: finalState.modelUsed,
+      tokens: {
+        input: finalState.tokensInput,
+        output: finalState.tokensOutput,
+      },
+      latencyMs: finalState.latencyMs,
+    },
+  });
 });

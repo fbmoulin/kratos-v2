@@ -62,6 +62,70 @@ vi.mock('ioredis', () => ({
   })),
 }));
 
+vi.mock('../services/analysis-repo.js', () => ({
+  analysisRepo: {
+    create: vi.fn().mockResolvedValue({
+      id: 'analysis-1',
+      extractionId: 'ext-1',
+      agentChain: 'supervisor→router→rag→specialist',
+      resultJson: {},
+      modelUsed: 'claude-sonnet-4-5-20250929',
+      tokensInput: 1000,
+      tokensOutput: 500,
+      latencyMs: 3000,
+      createdAt: new Date(),
+    }),
+    getByExtractionId: vi.fn().mockResolvedValue(null),
+  },
+}));
+
+vi.mock('@kratos/ai', () => ({
+  createAnalysisWorkflow: vi.fn().mockReturnValue({
+    invoke: vi.fn().mockResolvedValue({
+      extractionId: 'ext-1',
+      documentId: 'doc-1',
+      userId: 'test-user-id',
+      rawText: 'texto',
+      currentStep: 'complete',
+      routerResult: {
+        legalMatter: 'civil',
+        decisionType: 'sentenca',
+        complexity: 45,
+        confidence: 0.9,
+        selectedModel: 'claude-sonnet-4-5-20250929',
+        reasoning: 'Civil case',
+      },
+      ragContext: { vectorResults: [], graphResults: [], fusedResults: [] },
+      firacResult: {
+        facts: 'Fatos do caso',
+        issue: 'Questão jurídica',
+        rule: 'CDC Art. 51',
+        analysis: 'Análise',
+        conclusion: 'Conclusão',
+      },
+      draftResult: '# I - RELATORIO\n\nMinuta completa...',
+      modelUsed: 'claude-sonnet-4-5-20250929',
+      tokensInput: 1000,
+      tokensOutput: 500,
+      latencyMs: 3000,
+      error: null,
+    }),
+  }),
+  createInitialState: vi.fn().mockImplementation((input: Record<string, unknown>) => ({
+    ...input,
+    currentStep: 'router',
+    routerResult: null,
+    ragContext: null,
+    firacResult: null,
+    draftResult: null,
+    modelUsed: null,
+    tokensInput: 0,
+    tokensOutput: 0,
+    latencyMs: 0,
+    error: null,
+  })),
+}));
+
 const { default: app } = await import('../index.js');
 
 describe('Document routes', () => {
@@ -244,5 +308,95 @@ describe('Document routes', () => {
       headers: authHeader,
     });
     expect(res.status).toBe(404);
+  });
+
+  // ---- POST /:id/analyze ----
+
+  test('POST /v2/documents/:id/analyze runs workflow and returns FIRAC result', async () => {
+    const { documentRepo } = await import('../services/document-repo.js');
+    vi.mocked(documentRepo.getById).mockResolvedValueOnce({
+      id: 'doc-1',
+      userId: 'test-user-id',
+      fileName: 'processo.pdf',
+      filePath: 'path',
+      fileSize: 2048,
+      mimeType: 'application/pdf',
+      status: 'completed',
+      pages: 10,
+      errorMessage: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    vi.mocked(documentRepo.getExtraction).mockResolvedValueOnce({
+      id: 'ext-1',
+      documentId: 'doc-1',
+      contentJson: { text: 'Conteúdo extraído' },
+      extractionMethod: 'docling+pdfplumber',
+      rawText: 'SENTENÇA. Vistos. Trata-se de ação civil...',
+      tablesCount: 0,
+      imagesCount: 0,
+      createdAt: new Date(),
+    });
+
+    const res = await app.request('/v2/documents/doc-1/analyze', {
+      method: 'POST',
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toHaveProperty('analysisId');
+    expect(body.data).toHaveProperty('firacResult');
+    expect(body.data.firacResult).toHaveProperty('facts');
+    expect(body.data.firacResult).toHaveProperty('conclusion');
+    expect(body.data).toHaveProperty('draftResult');
+    expect(body.data.draftResult).toContain('RELATORIO');
+    expect(body.data).toHaveProperty('routerResult');
+    expect(body.data).toHaveProperty('modelUsed');
+    expect(body.data).toHaveProperty('tokens');
+    expect(body.data.tokens).toHaveProperty('input');
+    expect(body.data.tokens).toHaveProperty('output');
+    expect(body.data).toHaveProperty('latencyMs');
+  });
+
+  test('POST /v2/documents/:id/analyze returns 404 for non-existent document', async () => {
+    const { documentRepo } = await import('../services/document-repo.js');
+    vi.mocked(documentRepo.getById).mockResolvedValueOnce(null);
+
+    const res = await app.request('/v2/documents/nonexistent/analyze', {
+      method: 'POST',
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error.message).toContain('not found');
+  });
+
+  test('POST /v2/documents/:id/analyze returns 400 when extraction not ready', async () => {
+    const { documentRepo } = await import('../services/document-repo.js');
+    vi.mocked(documentRepo.getById).mockResolvedValueOnce({
+      id: 'doc-1',
+      userId: 'test-user-id',
+      fileName: 'pending.pdf',
+      filePath: 'path',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      status: 'pending',
+      pages: null,
+      errorMessage: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    vi.mocked(documentRepo.getExtraction).mockResolvedValueOnce(null);
+
+    const res = await app.request('/v2/documents/doc-1/analyze', {
+      method: 'POST',
+      headers: authHeader,
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('Extraction not available');
   });
 });

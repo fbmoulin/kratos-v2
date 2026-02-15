@@ -196,6 +196,65 @@ export const promptVersions = pgTable(
 );
 
 // ============================================================
+// Graph Entities — knowledge graph nodes for GraphRAG
+// ============================================================
+
+/**
+ * Nodes in the PostgreSQL-native knowledge graph.
+ * Entity types: lei, artigo, sumula, principio, tribunal, tema.
+ * Optional pgvector embedding for hybrid vector+graph search.
+ */
+export const graphEntities = pgTable(
+  'graph_entities',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    entityType: text('entity_type').notNull(),
+    content: text('content'),
+    embedding: vector('embedding'),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_graph_entities_type').on(table.entityType),
+    index('idx_graph_entities_name').on(table.name),
+  ],
+);
+
+// ============================================================
+// Graph Relations — knowledge graph edges for GraphRAG
+// ============================================================
+
+/**
+ * Directed edges connecting graph entities.
+ * Relation types: cita, fundamenta, revoga, complementa, contraria, regulamenta.
+ * Weight (0-1) indicates relation strength for ranked retrieval.
+ *
+ * @cascade Deleting a source or target entity cascades to its relations
+ */
+export const graphRelations = pgTable(
+  'graph_relations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceId: uuid('source_id')
+      .notNull()
+      .references(() => graphEntities.id, { onDelete: 'cascade' }),
+    targetId: uuid('target_id')
+      .notNull()
+      .references(() => graphEntities.id, { onDelete: 'cascade' }),
+    relationType: text('relation_type').notNull(),
+    weight: integer('weight').default(1),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_graph_relations_source').on(table.sourceId),
+    index('idx_graph_relations_target').on(table.targetId),
+    index('idx_graph_relations_type').on(table.relationType),
+  ],
+);
+
+// ============================================================
 // Audit Logs — immutable compliance trail
 // ============================================================
 
