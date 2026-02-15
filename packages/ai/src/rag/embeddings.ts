@@ -23,3 +23,9 @@ export const embeddingsService = {
     return getEmbeddings().embedDocuments(texts);
   },
 };
+
+/** Embed a single text into a 1536-dimensional vector. */
+export const embedText = embeddingsService.embedText.bind(embeddingsService);
+
+/** Embed multiple texts into an array of 1536-dimensional vectors. */
+export const embedBatch = embeddingsService.embedBatch.bind(embeddingsService);
