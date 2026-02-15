@@ -2,11 +2,13 @@ import type { AgentStateType } from '../state.js';
 import type { FIRACResult } from '@kratos/core';
 import { AIModel } from '@kratos/core';
 import { createAnthropicModel } from '../../providers/anthropic.js';
+import { createGoogleModel } from '../../providers/google.js';
 import { buildFiracEnterprisePrompt } from '../../prompts/firac-enterprise.js';
 import { selectModel } from '../../router/model-router.js';
 
 /**
- * Specialist agent node — generates FIRAC analysis using Claude.
+ * Specialist agent node — generates FIRAC analysis using the model
+ * selected by the complexity router.
  *
  * Uses the model and thinking budget determined by the router's complexity score.
  * Tracks token usage and latency for observability.
@@ -20,12 +22,13 @@ export async function specialistNode(
     const routerResult = state.routerResult!;
     const { model: modelEnum, thinking } = selectModel(routerResult.complexity);
 
-    // Map enum to model ID string
-    const modelId = modelEnum;
+    const modelId = modelEnum as string;
 
-    const model = createAnthropicModel(modelId, {
-      thinkingBudget: thinking ?? undefined,
-    });
+    const model = modelEnum === AIModel.GEMINI_FLASH
+      ? createGoogleModel(modelId)
+      : createAnthropicModel(modelId, {
+          thinkingBudget: thinking ?? undefined,
+        });
 
     // Build RAG context string from fused results
     const ragText = state.ragContext?.fusedResults
