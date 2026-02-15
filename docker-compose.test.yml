@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   postgres:
-    image: ankane/pgvector:pg15
+    image: postgres:15
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
