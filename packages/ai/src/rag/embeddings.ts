@@ -24,8 +24,6 @@ export const embeddingsService = {
   },
 };
 
-/** Embed a single text into a 1536-dimensional vector. */
+// BUG FIX #1: Named re-exports for direct imports (used by rag node)
 export const embedText = embeddingsService.embedText.bind(embeddingsService);
-
-/** Embed multiple texts into an array of 1536-dimensional vectors. */
 export const embedBatch = embeddingsService.embedBatch.bind(embeddingsService);

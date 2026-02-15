@@ -45,12 +45,14 @@ vi.mock('@kratos/db', () => ({
   },
 }));
 
-vi.mock('drizzle-orm', () => ({
-  sql: Object.assign(
-    (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
-    { raw: (s: string) => s },
-  ),
-}));
+vi.mock('drizzle-orm', () => {
+  const makeSql = (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const obj = { strings, values, getSQL: () => obj, queryChunks: [] };
+    return obj;
+  };
+  makeSql.raw = (s: string) => s;
+  return { sql: makeSql };
+});
 
 import { createAnalysisWorkflow } from './workflow.js';
 import { createInitialState } from './state.js';

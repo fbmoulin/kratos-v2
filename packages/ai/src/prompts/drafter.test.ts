@@ -13,7 +13,7 @@ describe('buildDrafterXml', () => {
 
   const ragContext: RAGContext = {
     vectorResults: [{ content: 'Sumula 381/STJ aplicavel', score: 0.92, source: 'stj' }],
-    graphResults: [{ content: 'CDC consumidor bancario', score: 0.88, source: 'graph' }],
+    graphResults: [{ content: 'CDC consumidor bancario', score: 0.88, path: [] }],
     fusedResults: [
       { content: 'Sumula 381/STJ aplicavel', score: 0.92, source: 'stj' },
       { content: 'CDC consumidor bancario', score: 0.88, source: 'graph' },

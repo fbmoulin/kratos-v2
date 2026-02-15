@@ -4,12 +4,14 @@ vi.mock('@kratos/db', () => ({
   db: { execute: vi.fn() },
 }));
 
-vi.mock('drizzle-orm', () => ({
-  sql: Object.assign(
-    (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
-    { raw: (s: string) => s },
-  ),
-}));
+vi.mock('drizzle-orm', () => {
+  const makeSql = (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const obj = { strings, values, getSQL: () => obj, queryChunks: [], toQuery: () => ({ sql: '', params: [] }) };
+    return obj;
+  };
+  makeSql.raw = (s: string) => s;
+  return { sql: makeSql };
+});
 
 import { db } from '@kratos/db';
 import { vectorSearch } from './vector-search.js';

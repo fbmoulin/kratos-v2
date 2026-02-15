@@ -1,7 +1,5 @@
 import type { AgentStateType } from '../state.js';
-import { AIModel } from '@kratos/core';
 import { createAnthropicModel } from '../../providers/anthropic.js';
-import { createGoogleModel } from '../../providers/google.js';
 import { selectModel } from '../../router/model-router.js';
 import { buildDrafterXml, getDomainPrompt } from '../../prompts/drafter.js';
 
@@ -16,7 +14,7 @@ import { buildDrafterXml, getDomainPrompt } from '../../prompts/drafter.js';
  *
  * Selects the appropriate domain prompt (BANCARIO, CONSUMIDOR, GENERICO, etc.)
  * based on the router's classification, formats the XML `<case>` input,
- * and invokes the appropriate model to produce a Relatório-Fundamentação-Dispositivo minuta.
+ * and invokes Claude to produce a Relatório-Fundamentação-Dispositivo minuta.
  */
 export async function drafterNode(
   state: AgentStateType,
@@ -30,11 +28,9 @@ export async function drafterNode(
     // Select model based on complexity (same tier as analyst)
     const { model: modelEnum, thinking } = selectModel(routerResult.complexity);
 
-    const model = modelEnum === AIModel.GEMINI_FLASH
-      ? createGoogleModel(modelEnum as string)
-      : createAnthropicModel(modelEnum as string, {
-          thinkingBudget: thinking ?? undefined,
-        });
+    const model = createAnthropicModel(modelEnum, {
+      thinkingBudget: thinking ?? undefined,
+    });
 
     // Select domain-specific specialist prompt
     const systemPrompt = getDomainPrompt(routerResult.legalMatter);
