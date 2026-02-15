@@ -36,6 +36,13 @@ vi.mock('@/hooks/useReview', () => ({
   })),
 }));
 
+vi.mock('@/hooks/useExport', () => ({
+  useExport: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+}));
+
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return createElement(QueryClientProvider, { client: qc },

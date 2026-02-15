@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useDocument } from '@/hooks/useDocuments';
 import { useReview } from '@/hooks/useReview';
+import { useExport } from '@/hooks/useExport';
 import { ReasoningPanel } from '@/components/hitl/ReasoningPanel';
 import { DiffViewer } from '@/components/hitl/DiffViewer';
 import { MinutaEditor } from '@/components/hitl/MinutaEditor';
@@ -14,6 +15,7 @@ export default function Review() {
   const navigate = useNavigate();
   const { data, isLoading } = useDocument(id!);
   const review = useReview(id!);
+  const exportDoc = useExport(id!);
   const [editedContent, setEditedContent] = useState('');
 
   const doc = data?.data;
@@ -88,7 +90,9 @@ export default function Review() {
         onApprove={handleAction('approved')}
         onRevise={handleAction('revised')}
         onReject={handleAction('rejected')}
+        onExport={() => exportDoc.mutate()}
         isSubmitting={review.isPending}
+        showExport={doc.status === 'reviewed'}
       />
     </div>
   );

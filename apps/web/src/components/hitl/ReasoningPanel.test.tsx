@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ReasoningPanel } from './ReasoningPanel';
+import { LegalMatter, DecisionType, AIModel } from '@kratos/core';
 
 const mockFirac = {
   facts: 'O autor ingressou com ação de cobrança.',
@@ -11,11 +12,11 @@ const mockFirac = {
 };
 
 const mockRouter = {
-  legalMatter: 'civil' as const,
-  decisionType: 'sentenca' as const,
+  legalMatter: LegalMatter.CIVIL,
+  decisionType: DecisionType.SENTENCA,
   complexity: 45,
   confidence: 87,
-  selectedModel: 'claude-sonnet-4-5-20250929' as const,
+  selectedModel: AIModel.CLAUDE_SONNET,
   reasoning: 'Standard civil case',
 };
 
