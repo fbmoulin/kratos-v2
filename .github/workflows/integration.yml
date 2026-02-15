@@ -1,0 +1,80 @@
+name: Integration / E2E (docker-compose)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and start DB & Redis
+        run: |
+          docker compose -f docker-compose.test.yml up -d postgres redis
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 60); do
+            docker compose -f docker-compose.test.yml exec -T postgres pg_isready -U postgres -d kratos_test && break
+            echo "waiting for postgres..."
+            sleep 2
+          done
+
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 60); do
+            docker compose -f docker-compose.test.yml exec -T redis redis-cli ping | grep -q PONG && break
+            echo "waiting for redis..."
+            sleep 1
+          done
+
+      - name: Run DB setup (migrations / push)
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:55432/kratos_test
+        run: |
+          pnpm --filter @kratos/db db:push
+
+      - name: Build and start API + worker
+        run: docker compose -f docker-compose.test.yml up -d --build api worker
+
+      - name: Wait for API healthy
+        run: |
+          for i in $(seq 1 60); do
+            curl -f http://localhost:3001/v2/health && break || true
+            echo "waiting for api..."
+            sleep 2
+          done
+
+      - name: Run integration tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:55432/kratos_test
+          REDIS_URL: redis://localhost:63790
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          # Run tests (consider using TEST_INTEGRATION=1 to gate longer tests)
+          pnpm test
+
+      - name: Tear down infra
+        if: always()
+        run: docker compose -f docker-compose.test.yml down --volumes --remove-orphans
+
