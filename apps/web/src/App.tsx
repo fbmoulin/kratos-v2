@@ -8,6 +8,8 @@ import { Header } from '@/components/layout/Header';
 
 const Login = lazy(() => import('@/pages/Login'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const DocumentDetail = lazy(() => import('@/pages/DocumentDetail'));
+const Review = lazy(() => import('@/pages/Review'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -46,6 +48,22 @@ export default function App() {
                 element={
                   <AuthGuard>
                     <AppLayout><Dashboard /></AppLayout>
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/documents/:id"
+                element={
+                  <AuthGuard>
+                    <AppLayout><DocumentDetail /></AppLayout>
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/documents/:id/review"
+                element={
+                  <AuthGuard>
+                    <AppLayout><Review /></AppLayout>
                   </AuthGuard>
                 }
               />
