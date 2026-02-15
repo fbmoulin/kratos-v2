@@ -125,6 +125,33 @@ async function runPipeline() {
   console.log(`  selectedModel:   ${selectedModel}`);
   console.log(`  thinking:        ${thinking ?? 'off'}`);
 
+  // ─── STAGE 1.5: RAG — Vector Search ──────────────────────────────
+  console.log('\nSTAGE 1.5: RAG — Vector Search...');
+  try {
+    const { embedText } = await import('../packages/ai/src/rag/embeddings.js');
+    const { vectorSearch } = await import('../packages/ai/src/rag/vector-search.js');
+
+    const queryText = routerText.slice(0, 2000);
+    const queryEmbedding = await embedText(queryText);
+    const ragResults = await vectorSearch({
+      embedding: queryEmbedding,
+      limit: 5,
+      category: routerResult.legalMatter === 'civil' ? 'civil' : undefined,
+    });
+
+    console.log(`  Results:   ${ragResults.length}`);
+    if (ragResults.length > 0) {
+      console.log(`  Top score: ${ragResults[0].score.toFixed(4)}`);
+      console.log(`  Top source: ${ragResults[0].source}`);
+      console.log(`  Preview:   ${ragResults[0].content.slice(0, 120)}...`);
+    } else {
+      console.log('  WARNING: No RAG results — run `pnpm seed` to populate precedents');
+    }
+  } catch (err: any) {
+    console.log(`  RAG skipped: ${err.message}`);
+    console.log('  (requires OPENAI_API_KEY + seeded precedents table)');
+  }
+
   // ─── STAGE 2: FIRAC+ Enterprise (Claude) ───────────────────────────
   console.log('\nSTAGE 2: FIRAC+ Enterprise Analysis (Claude)...');
   const firacStart = Date.now();

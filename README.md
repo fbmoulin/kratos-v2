@@ -46,7 +46,7 @@ O sistema é projetado para ser escalável, seguro e eficiente, utilizando as te
 | Camada | Tecnologia | Propósito |
 | :--- | :--- | :--- |
 | **Frontend** | React 19, Vite, Tailwind CSS 4, shadcn/ui | Interface de usuário reativa, moderna e acessível. |
-| **Backend API** | Node.js (Express) ou Python (FastAPI) | API principal para gerenciar uploads, usuários e resultados. |
+| **Backend API** | Node.js (Hono 4.7), TypeScript | API principal para gerenciar uploads, usuários e resultados. |
 | **Banco de Dados** | PostgreSQL (via Supabase) | Armazenamento de metadados, extrações, análises e logs de auditoria. |
 | **Busca Vetorial** | pgvector | Indexação e busca de similaridade para o sistema RAG. |
 | **Orquestração de IA** | LangGraph | Modela e executa o fluxo de agentes de IA. |
@@ -98,8 +98,8 @@ Siga estas instruções para configurar e executar o ambiente de desenvolvimento
 
 1.  **Clone o repositório:**
     ```bash
-    git clone https://github.com/seu-usuario/kratos.git
-    cd kratos
+    git clone https://github.com/fbmoulin/kratos-v2.git
+    cd kratos-v2
     ```
 
 2.  **Instale as dependências:**
@@ -108,12 +108,21 @@ Siga estas instruções para configurar e executar o ambiente de desenvolvimento
     ```
 
 3.  **Configure as variáveis de ambiente:**
-    - Crie um arquivo `.env` na raiz de cada aplicação em `apps/` e no worker em `workers/`.
-    - Consulte o arquivo `docs/ENV.md` para a lista completa de variáveis necessárias.
+    ```bash
+    cp .env.example .env
+    # Preencha as chaves: SUPABASE_URL, SUPABASE_KEY, DATABASE_URL,
+    # ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY
+    # Consulte docs/ENV.md para a lista completa
+    ```
 
 4.  **Inicie os serviços de infraestrutura (Redis):**
     ```bash
     docker-compose up -d
+    ```
+
+5.  **Seed da base de precedentes (opcional, necessário para RAG):**
+    ```bash
+    pnpm seed
     ```
 
 ## Uso
@@ -130,15 +139,22 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 -   **Backend API**: Disponível em `http://localhost:3001`
 -   **Celery Worker**: Iniciado e pronto para consumir jobs da fila.
 
-## Roadmap
+## Status do Desenvolvimento
 
-O desenvolvimento do KRATOS v2 está planejado em 4 fases principais, com uma duração total estimada de 12 a 16 semanas para o MVP.
+| Fase | Status | Descrição |
+| :--- | :--- | :--- |
+| **Fase 0** | Concluída | Fundação, monorepo, CI/CD, segurança |
+| **Fase 1** | Concluída | API (Hono), documents CRUD, upload, PDF worker scaffold |
+| **Fase 2** | Concluída | LangGraph pipeline (supervisor → router → RAG → FIRAC+ → drafter), model-router, 70 testes AI |
+| **Fase 2.5** | Concluída | DB schema aplicado (8 tabelas + pgvector), 100 precedentes STJ seedados, scripts E2E |
+| **Fase 3** | Em planejamento | Frontend (React 19), HITL review UI, PDF extraction pipeline |
+| **Fase 4** | Futura | Testes de integração, monitoramento, deploy |
 
--   **Fase 0: Fundação, Segurança e CI/CD** (2-3 semanas)
--   **Fase 1: Motor de Ingestão e Extração de PDF** (3-4 semanas)
--   **Fase 2: Orquestração de Agentes e Lógica de IA** (3-4 semanas)
--   **Fase 3: Frontend, HITL e Geração de Documentos** (2-3 semanas)
--   **Fase 4: Testes, Monitoramento e Deploy** (2 semanas)
+### Métricas Atuais
+- **88 testes** passando (70 AI + 9 API + 9 Core)
+- **8 tabelas** no Postgres com pgvector
+- **100 precedentes** STJ com embeddings 1536d
+- **7/7 builds** OK (Turborepo)
 
 Para uma visão detalhada do roadmap, consulte o arquivo `docs/ROADMAP.md`.
 

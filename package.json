@@ -10,6 +10,8 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "seed": "tsx scripts/seed-precedents.ts",
+    "e2e": "tsx scripts/test-e2e-full.ts",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {

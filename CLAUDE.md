@@ -142,10 +142,12 @@ workers/
 
 Critical env vars (see `.env.example` and `docs/ENV.md`):
 - `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` - Database + Auth + Storage
+- `DATABASE_URL` - Direct Postgres connection (Drizzle ORM)
 - `REDIS_URL` - Cache + Celery broker
-- `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY` - AI models
+- `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY` - AI models
 - `LANGSMITH_API_KEY` - Agent tracing and debugging
 - `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` - Worker queue
+- `TEST_USER_ID` - Dev-only auth bypass for E2E testing (UUID)
 
 ### Security & Compliance
 
@@ -201,11 +203,53 @@ Critical env vars (see `.env.example` and `docs/ENV.md`):
 GitHub Actions workflows (`.github/workflows/`):
 - **CI** (`ci.yml`): On push/PR to `main`/`develop` — pnpm install, turbo build, lint, test (Node 22)
 
+### Seed & E2E Scripts
+```bash
+# Seed precedents table with 100 STJ acordaos + embeddings
+pnpm seed
+
+# Run full E2E test (requires API running + Redis + worker)
+TEST_USER_ID=00000000-0000-0000-0000-000000000001 pnpm e2e
+
+# Run AI-only E2E pipeline (no API needed, uses real API keys)
+node --env-file=.env packages/ai/node_modules/.bin/tsx scripts/test-e2e-pipeline.ts [domain]
+```
+
+### Docker Services
+```bash
+# Redis only (default)
+docker compose up -d
+
+# Redis + PDF Worker
+docker compose --profile worker up -d
+```
+
+### WSL2 Connectivity Note
+The Supabase Postgres host resolves to IPv6 only, which WSL2 doesn't support. Workarounds:
+- **Seed script**: Uses Supabase REST API (HTTPS) instead of direct Postgres
+- **drizzle-kit push**: Use Supabase MCP or run from PowerShell Windows
+- **App runtime**: Will need pooler URL or IPv6 fix in WSL2
+
 ## Current Test Coverage
 
-| Package | Test File | Tests |
-|---------|-----------|-------|
-| `@kratos/core` | `src/index.test.ts` | 9 (enums, constants) |
-| `@kratos/api` | `src/routes/health.test.ts` | 4 (health, ready, root, no-auth) |
-| `@kratos/api` | `src/routes/documents.test.ts` | 5 (CRUD, auth guard, validation) |
-| **Total** | **3 files** | **18 tests** |
+| Package | Tests | Suites | Notes |
+|---------|-------|--------|-------|
+| `@kratos/ai` | 70 | 15 | prompts, graph nodes, RAG, router, providers, workflow |
+| `@kratos/api` | 9 | 2 | health, documents CRUD, auth guard |
+| `@kratos/core` | 9 | 1 | enums, constants |
+| **Total** | **88** | **18** | |
+
+## Database Schema (Supabase Postgres + pgvector)
+
+8 tables in `public` schema:
+- `documents` — uploaded PDFs, processing lifecycle
+- `extractions` — structured content from PDF pipeline (1:1 with documents)
+- `analyses` — AI-generated FIRAC analyses (references extractions)
+- `precedents` — legal precedents with `vector(1536)` embeddings for RAG
+- `graph_entities` — knowledge graph nodes (GraphRAG)
+- `graph_relations` — knowledge graph edges (GraphRAG)
+- `prompt_versions` — versioned prompt templates (A/B testing)
+- `audit_logs` — immutable compliance trail (CNJ 615/2025)
+
+**Supabase project:** `jzgdorcvfxlahffqnyor` (stj-rag), region sa-east-1
+**Seed data:** 100 STJ acordaos from 4 turmas, embeddings 1536d (text-embedding-3-small)

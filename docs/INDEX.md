@@ -59,9 +59,8 @@ Guia completo para navegar toda a documentação do projeto.
 
 | Recurso | Descrição | Localização |
 |---------|-----------|-------------|
-| Templates da Fase 0 | Código de referência (auth, routes, config) | `docs/phase-0-templates/` |
 | Diagramas Mermaid | 5 diagramas arquiteturais (.mmd + .png) | `docs/diagrams/` |
-| Scripts de automação | init_project.sh, run_ci.sh | `scripts/` |
+| Scripts | seed-precedents, test-e2e-full, test-e2e-pipeline | `scripts/` |
 
 ---
 

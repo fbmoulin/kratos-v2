@@ -39,6 +39,7 @@ Estas variáveis são específicas para o serviço da API principal.
 | `OPENROUTER_API_KEY` | A chave de API para o serviço OpenRouter, usado para roteamento de modelos de IA. | `sk-or-v1...` |
 | `GEMINI_API_KEY` | A chave de API para o Google AI Studio (Gemini). | `AIza...` |
 | `ANTHROPIC_API_KEY` | A chave de API para a Anthropic (Claude). | `sk-ant-api03...` |
+| `OPENAI_API_KEY` | A chave de API para a OpenAI, usada para gerar embeddings (text-embedding-3-small, 1536d). | `sk-proj-...` |
 | `LANGSMITH_API_KEY` | A chave de API para o LangSmith, usado para tracing e observabilidade de IA. | `ls__...` |
 
 ---
@@ -66,3 +67,14 @@ Estas variáveis são necessárias para o worker Celery que processa os PDFs.
 | `SUPABASE_URL` | A URL do seu projeto Supabase. | `https://xyz.supabase.co` |
 | `SUPABASE_KEY` | A chave de serviço (`service_role`) do seu projeto Supabase, pois o worker precisa de permissões elevadas para escrever no banco de dados. | `ey...` |
 | `GEMINI_API_KEY` | A chave de API para o Google AI Studio (Gemini), usada no pipeline de extração. | `AIza...` |
+
+---
+
+## 6. Variáveis de Teste E2E
+
+Estas variáveis são opcionais e usadas apenas para testes end-to-end em desenvolvimento.
+
+| Variável | Descrição | Exemplo de Valor |
+| :--- | :--- | :--- |
+| `TEST_USER_ID` | UUID de um usuário fictício para bypass de autenticação em dev. Só funciona quando `NODE_ENV=development`. | `00000000-0000-0000-0000-000000000001` |
+| `API_BASE_URL` | URL base da API para o script E2E. | `http://localhost:3001` |

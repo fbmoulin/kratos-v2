@@ -1,0 +1,146 @@
+{
+  "name": "kratos-v2",
+  "version": "2.0.0",
+  "description": "KRATOS v2 - Legal automation platform for Brazilian judiciary (PDF → FIRAC AI analysis → document drafts)",
+  "generated": "2026-02-15",
+  "stack": {
+    "monorepo": "turborepo + pnpm 9",
+    "runtime": "Node 22+",
+    "language": "TypeScript + Python",
+    "api": "Hono 4.7",
+    "orm": "Drizzle 0.39",
+    "database": "PostgreSQL (Supabase) + pgvector",
+    "frontend": "React 19 + Vite 6 + Tailwind CSS 4",
+    "queue": "Redis 7 (ioredis)",
+    "ai": "LangGraph (Phase 2)",
+    "testing": "Vitest 3 + pytest",
+    "ci": "GitHub Actions"
+  },
+  "workspaces": {
+    "apps/api": {
+      "name": "@kratos/api",
+      "purpose": "REST API (Hono, /v2 base path)",
+      "entry": "src/index.ts",
+      "deps": ["@kratos/core", "@kratos/db", "@kratos/ai"],
+      "routes": [
+        "GET /v2/ (public)",
+        "GET /v2/health (public)",
+        "GET /v2/health/ready (public)",
+        "GET /v2/documents (auth)",
+        "POST /v2/documents (auth, multipart upload)",
+        "GET /v2/documents/:id (auth)",
+        "GET /v2/documents/:id/extraction (auth)",
+        "POST /v2/documents/:id/analyze (auth, Phase 2 scaffold)"
+      ],
+      "services": ["storageService", "queueService", "documentRepo"],
+      "testFiles": 5
+    },
+    "apps/web": {
+      "name": "@kratos/web",
+      "purpose": "React 19 frontend (HITL review interface)",
+      "entry": "src/main.tsx",
+      "deps": ["@kratos/core"],
+      "testFiles": 0
+    },
+    "packages/core": {
+      "name": "@kratos/core",
+      "purpose": "Shared types, enums, constants (zero deps)",
+      "entry": "src/index.ts",
+      "exports": [
+        "DocumentStatus", "UserRole", "LegalMatter", "ReviewAction", "AIModel",
+        "Document", "Extraction", "Analysis", "AuditLog", "Precedent", "PromptVersion",
+        "FIRACResult", "ReviewPayload",
+        "APP_NAME", "APP_VERSION", "CACHE_TTL", "RATE_LIMITS", "SLA"
+      ],
+      "testFiles": 1
+    },
+    "packages/db": {
+      "name": "@kratos/db",
+      "purpose": "Drizzle ORM schema, DB client, migrations",
+      "entry": "src/index.ts",
+      "exports": ["documents", "extractions", "analyses", "precedents", "promptVersions", "auditLogs", "db", "queryClient"],
+      "tables": ["documents", "extractions", "analyses", "precedents", "prompt_versions", "audit_logs"],
+      "deps": ["@kratos/core"],
+      "testFiles": 0
+    },
+    "packages/ai": {
+      "name": "@kratos/ai",
+      "purpose": "LangGraph agents, RAG engine, prompts (Phase 2 stub)",
+      "entry": "src/index.ts",
+      "deps": ["@kratos/core", "@kratos/db"],
+      "status": "stub",
+      "testFiles": 0
+    },
+    "packages/tools": {
+      "name": "@kratos/tools",
+      "purpose": "DOCX export, sanitization (Phase 3 stub)",
+      "entry": "src/index.ts",
+      "deps": ["@kratos/core"],
+      "status": "stub",
+      "testFiles": 0
+    },
+    "workers/pdf-worker": {
+      "name": "pdf-worker",
+      "purpose": "Python async PDF extraction (Redis BRPOP queue)",
+      "entry": "src/tasks/extract_pdf.py",
+      "language": "python",
+      "pipeline": "Redis BRPOP → Supabase download → pdfplumber → Pydantic → DB save",
+      "queueKey": "kratos:jobs:pdf",
+      "testFiles": 5
+    }
+  },
+  "database": {
+    "provider": "Supabase (managed PostgreSQL)",
+    "extensions": ["pgvector"],
+    "tables": {
+      "documents": { "pk": "uuid", "indexes": ["userId", "status"], "cascades": [] },
+      "extractions": { "pk": "uuid", "indexes": ["documentId"], "cascades": ["documents → extractions"] },
+      "analyses": { "pk": "uuid", "indexes": ["extractionId"], "cascades": ["extractions → analyses"] },
+      "precedents": { "pk": "uuid", "indexes": ["category"], "embeddingDim": 1536 },
+      "prompt_versions": { "pk": "uuid", "indexes": ["(promptKey, isActive)"], "unique": ["(promptKey, version)"] },
+      "audit_logs": { "pk": "uuid", "indexes": ["(entityType, entityId)", "userId"] }
+    }
+  },
+  "commands": {
+    "dev": "pnpm dev",
+    "build": "pnpm build",
+    "test": "pnpm test",
+    "lint": "pnpm lint",
+    "format": "pnpm format",
+    "apiDev": "pnpm --filter @kratos/api dev",
+    "webDev": "pnpm --filter @kratos/web dev",
+    "apiTest": "pnpm --filter @kratos/api test",
+    "coreTest": "pnpm --filter @kratos/core test",
+    "workerTest": "cd workers/pdf-worker && python -m pytest",
+    "dbGenerate": "pnpm --filter @kratos/db db:generate",
+    "dbMigrate": "pnpm --filter @kratos/db db:migrate",
+    "dbPush": "pnpm --filter @kratos/db db:push",
+    "dbStudio": "pnpm --filter @kratos/db db:studio"
+  },
+  "envVars": [
+    "SUPABASE_URL", "SUPABASE_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+    "REDIS_URL", "CORS_ORIGIN", "PORT",
+    "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY",
+    "LANGSMITH_API_KEY",
+    "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"
+  ],
+  "phases": {
+    "0": { "status": "done", "scope": "Monorepo, CI, DB schema, Drizzle" },
+    "1": { "status": "done", "scope": "API, Auth, Documents CRUD, PDF worker, Storage" },
+    "2": { "status": "stub", "scope": "LangGraph agents, FIRAC, RAG, model routing" },
+    "3": { "status": "stub", "scope": "DOCX export, HITL UI, dashboard, deploy" }
+  },
+  "git": {
+    "branch": "main",
+    "remote": "fbmoulin/kratos-v2",
+    "ci": ["ci.yml", "integration.yml"]
+  },
+  "fileCount": {
+    "sourceTS": 20,
+    "sourcePy": 10,
+    "testTS": 6,
+    "testPy": 5,
+    "docs": 16,
+    "total": 57
+  }
+}
