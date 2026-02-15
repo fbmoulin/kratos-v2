@@ -6,6 +6,9 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
+# Run asynchronously (session starts while deps install in background)
+echo '{"async": true, "asyncTimeout": 300000}'
+
 cd "$CLAUDE_PROJECT_DIR"
 
 # ── Node.js dependencies (pnpm workspaces + Turborepo) ──
