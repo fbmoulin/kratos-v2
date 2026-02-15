@@ -49,6 +49,10 @@ venv/
 # Docker
 docker-compose.override.yml
 
+# Supabase local dev
+supabase/.temp/
+supabase/.branches/
+
 # Misc
 *.tsbuildinfo
 .worktrees

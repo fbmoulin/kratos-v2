@@ -215,6 +215,21 @@ TEST_USER_ID=00000000-0000-0000-0000-000000000001 pnpm e2e
 node --env-file=.env packages/ai/node_modules/.bin/tsx scripts/test-e2e-pipeline.ts [domain]
 ```
 
+### Local Supabase (recommended for development)
+```bash
+# Start local Supabase (Postgres + Auth + Storage + pgvector)
+npx supabase start
+# → DB: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+# → API: http://127.0.0.1:54321
+# → Studio: http://127.0.0.1:54323
+
+# Push Drizzle schema to local DB
+pnpm --filter @kratos/db db:push
+
+# Stop local Supabase
+npx supabase stop
+```
+
 ### Docker Services
 ```bash
 # Redis only (default)
@@ -224,20 +239,19 @@ docker compose up -d
 docker compose --profile worker up -d
 ```
 
-### WSL2 Connectivity Note
-The Supabase Postgres host resolves to IPv6 only, which WSL2 doesn't support. Workarounds:
-- **Seed script**: Uses Supabase REST API (HTTPS) instead of direct Postgres
-- **drizzle-kit push**: Use Supabase MCP or run from PowerShell Windows
-- **App runtime**: Will need pooler URL or IPv6 fix in WSL2
+### Cloud vs Local
+- **Local (default):** `.env` points to `127.0.0.1:54322` — no connectivity issues
+- **Cloud:** Supabase project `jzgdorcvfxlahffqnyor` (sa-east-1) — IPv6 only host, WSL2 can't connect directly. Use Supabase REST API or run from Windows PowerShell.
+- Switch by commenting/uncommenting the Supabase section in `.env`
 
 ## Current Test Coverage
 
 | Package | Tests | Suites | Notes |
 |---------|-------|--------|-------|
 | `@kratos/ai` | 70 | 15 | prompts, graph nodes, RAG, router, providers, workflow |
-| `@kratos/api` | 9 | 2 | health, documents CRUD, auth guard |
-| `@kratos/core` | 9 | 1 | enums, constants |
-| **Total** | **88** | **18** | |
+| `@kratos/api` | 23 | 5 | health, documents CRUD, auth, storage, queue |
+| `@kratos/core` | 18 | 2 | enums, constants, types |
+| **Total** | **111** | **22** | |
 
 ## Database Schema (Supabase Postgres + pgvector)
 
