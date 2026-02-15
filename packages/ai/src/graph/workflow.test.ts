@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import { LegalMatter, DecisionType, AIModel } from '@kratos/core';
+
 
 // Mock all external dependencies that nodes use
 vi.mock('@langchain/google-genai', () => ({
@@ -55,7 +55,6 @@ vi.mock('drizzle-orm', () => {
 });
 
 import { createAnalysisWorkflow } from './workflow.js';
-import { createInitialState } from './state.js';
 
 describe('createAnalysisWorkflow', () => {
   test('compiles a runnable workflow graph', () => {

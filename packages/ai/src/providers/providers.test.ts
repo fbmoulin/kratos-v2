@@ -31,7 +31,7 @@ describe('createAnthropicModel', () => {
   });
 
   test('creates Opus model with thinking — omits temperature', () => {
-    const model = createAnthropicModel('claude-opus-4', { thinkingBudget: 16_000 });
+    const _model = createAnthropicModel('claude-opus-4', { thinkingBudget: 16_000 });
     expect(ChatAnthropic).toHaveBeenCalledWith(
       expect.objectContaining({
         modelName: 'claude-opus-4',

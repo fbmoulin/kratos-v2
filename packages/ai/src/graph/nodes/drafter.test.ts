@@ -74,6 +74,7 @@ describe('drafterNode', () => {
     const { createAnthropicModel } = await import('../../providers/anthropic.js');
     vi.mocked(createAnthropicModel).mockReturnValueOnce({
       invoke: vi.fn().mockRejectedValueOnce(new Error('API timeout')),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
     const state = makeState();

@@ -27,6 +27,7 @@ describe('vectorSearch', () => {
     mockExecute.mockResolvedValueOnce([
       { id: 'p1', content: 'Súmula 297 STJ', score: 0.92, category: 'bancario', source: 'STJ', metadata: {} },
       { id: 'p2', content: 'Art. 51 CDC', score: 0.85, category: 'consumidor', source: 'CDC', metadata: {} },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ] as any);
 
     const embedding = new Array(1536).fill(0.01);
@@ -41,6 +42,7 @@ describe('vectorSearch', () => {
   test('filters by category when provided', async () => {
     mockExecute.mockResolvedValueOnce([
       { id: 'p1', content: 'Dano moral bancário', score: 0.88, category: 'bancario', source: 'STJ', metadata: {} },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ] as any);
 
     const embedding = new Array(1536).fill(0.02);

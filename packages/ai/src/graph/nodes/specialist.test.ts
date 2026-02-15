@@ -18,6 +18,7 @@ beforeEach(() => {
   mockInvoke.mockReset();
   vi.mocked(ChatAnthropic).mockImplementation(() => ({
     invoke: mockInvoke,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any);
 });
 

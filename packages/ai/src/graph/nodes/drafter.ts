@@ -53,6 +53,7 @@ export async function drafterNode(
       : JSON.stringify(response.content);
 
     // Extract token usage
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const usage = (response as any).usage_metadata;
     const drafterTokensIn = Number(usage?.input_tokens) || 0;
     const drafterTokensOut = Number(usage?.output_tokens) || 0;

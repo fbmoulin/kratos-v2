@@ -1,6 +1,6 @@
 import type { AgentStateType } from '../state.js';
 import type { FIRACResult } from '@kratos/core';
-import { AIModel } from '@kratos/core';
+import type { AIModel as _AIModel } from '@kratos/core';
 import { createAnthropicModel } from '../../providers/anthropic.js';
 import { buildFiracEnterprisePrompt } from '../../prompts/firac-enterprise.js';
 import { selectModel } from '../../router/model-router.js';
@@ -56,6 +56,7 @@ export async function specialistNode(
     };
 
     // Extract token usage from response metadata
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const usage = (response as any).usage_metadata;
     const tokensInput = Number(usage?.input_tokens) || 0;
     const tokensOutput = Number(usage?.output_tokens) || 0;

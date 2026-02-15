@@ -28,6 +28,7 @@ describe('graphSearch', () => {
     mockExecute.mockResolvedValueOnce([
       { id: 'e1', name: 'Súmula 297', entity_type: 'sumula', content: 'CDC aplica-se a bancos', metadata: {} },
       { id: 'e2', name: 'Art. 51 CDC', entity_type: 'artigo', content: 'Cláusulas abusivas', metadata: {} },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ] as any);
 
     const results = await graphSearch({ query: 'CDC banco' });
@@ -44,6 +45,7 @@ describe('findRelatedEntities', () => {
     mockExecute.mockResolvedValueOnce([
       { id: 'e1', name: 'Súmula 297', entity_type: 'sumula', content: 'CDC + bancos', depth: 0, path: ['e1'] },
       { id: 'e2', name: 'Art. 3 CDC', entity_type: 'artigo', content: 'Consumidor', depth: 1, path: ['e1', 'e2'] },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ] as any);
 
     const results = await findRelatedEntities('e1', 2);

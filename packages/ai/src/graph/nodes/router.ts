@@ -50,7 +50,7 @@ export async function routerNode(
       routerConfidence: confidence,
     });
 
-    const { model: selectedModel, thinking } = selectModel(complexity);
+    const { model: selectedModel, thinking: _thinking } = selectModel(complexity);
 
     const routerResult: RouterResult = {
       legalMatter,
