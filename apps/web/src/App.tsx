@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import * as Sentry from '@sentry/react';
 import { AuthGuard } from '@/components/layout/AuthGuard';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -37,6 +38,7 @@ function Loading() {
 
 export default function App() {
   return (
+    <Sentry.ErrorBoundary fallback={<div className="min-h-screen bg-(--color-bg) flex items-center justify-center text-(--color-text)">Ocorreu um erro inesperado.</div>}>
     <ThemeProvider attribute="class" defaultTheme="dark">
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
@@ -73,5 +75,6 @@ export default function App() {
         </BrowserRouter>
       </QueryClientProvider>
     </ThemeProvider>
+    </Sentry.ErrorBoundary>
   );
 }
