@@ -3,9 +3,10 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
+    "start": "python -m src.tasks.extract_pdf",
     "build": "echo \"Python worker - no TS build needed\"",
     "lint": "echo \"Use ruff for Python linting\"",
-    "test": "echo \"No tests yet\"",
+    "test": "python -m pytest tests/ -v",
     "clean": "rm -rf __pycache__"
   }
 }

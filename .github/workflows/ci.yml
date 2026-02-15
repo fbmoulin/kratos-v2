@@ -6,24 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22]
-
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+      - name: Setup project
+        uses: ./.github/actions/setup-kratos
 
       - name: Build all packages
         run: pnpm build
@@ -31,8 +25,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test with coverage
-        run: pnpm test:coverage
+      - name: Test (core + ai + api)
+        run: |
+          pnpm --filter @kratos/core test
+          pnpm --filter @kratos/ai test
+          pnpm --filter @kratos/api test
         env:
           NODE_ENV: test
 

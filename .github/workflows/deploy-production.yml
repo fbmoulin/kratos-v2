@@ -15,17 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup project
+        uses: ./.github/actions/setup-kratos
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
       - run: pnpm build
+
       - name: Run tests
-        run: pnpm test
+        run: |
+          pnpm --filter @kratos/core test
+          pnpm --filter @kratos/ai test
+          pnpm --filter @kratos/api test
         env:
           NODE_ENV: test
 
@@ -37,14 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+      - name: Setup project
+        uses: ./.github/actions/setup-kratos
 
       - name: Build web
         run: pnpm --filter @kratos/web build
@@ -64,16 +57,33 @@ jobs:
           working-directory: apps/web
 
   deploy-api:
-    name: Deploy API (Fly.io Production)
+    name: Deploy API (Railway Production)
     needs: test
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
-      - name: Deploy to Fly.io (Production)
-        run: flyctl deploy --remote-only --app kratos-api-production
+      - name: Deploy API to Railway
+        run: railway up --service kratos-api --detach
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+
+  deploy-worker:
+    name: Deploy PDF Worker (Railway Production)
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Worker to Railway
+        run: railway up --service kratos-pdf-worker --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}

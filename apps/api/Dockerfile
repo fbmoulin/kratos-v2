@@ -1,31 +1,47 @@
-FROM node:22-bullseye AS base
+# ─── Stage 1: Install dependencies ───────────────────────────────
+FROM node:22-slim AS builder
 WORKDIR /workspace
 
-# enable corepack/pnpm and install pnpm
 RUN corepack enable \
   && corepack prepare pnpm@9.15.0 --activate
 
-# copy lockfile and package manifests to leverage layer caching
-COPY package.json pnpm-lock.yaml ./
-COPY pnpm-workspace.yaml ./
+# Copy manifests first for layer caching
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/core/package.json packages/core/
+COPY packages/db/package.json packages/db/
+COPY packages/ai/package.json packages/ai/
+# Workers dir needed for pnpm-workspace.yaml resolution
+COPY workers/pdf-worker/package.json workers/pdf-worker/
 
-# copy workspace packages/package.json to help pnpm install resolve workspaces
-COPY packages packages
-COPY apps apps
-
-# install dependencies
 RUN pnpm install --frozen-lockfile
 
-# optional: run package build commands (API uses tsx runtime)
-RUN pnpm --filter @kratos/api build
+# ─── Stage 2: Copy source & build ───────────────────────────────
+COPY tsconfig.json ./
+COPY apps/api/ apps/api/
+COPY packages/core/ packages/core/
+COPY packages/db/ packages/db/
+COPY packages/ai/ packages/ai/
 
-FROM node:22-bullseye AS prod
-WORKDIR /app
-COPY --from=base /workspace .
+# Build workspace packages (core, db, ai need tsc compilation)
+RUN pnpm build
+
+# ─── Stage 3: Production image ───────────────────────────────────
+FROM node:22-slim AS prod
+WORKDIR /workspace
+
+RUN corepack enable \
+  && corepack prepare pnpm@9.15.0 --activate
+
+# Copy installed workspace from builder
+COPY --from=builder /workspace ./
+
 ENV NODE_ENV=production
 ENV PORT=3001
 EXPOSE 3001
 
-# Start API using workspace start script (uses tsx to run src/index.ts)
-CMD ["pnpm", "--filter", "@kratos/api", "start"]
+# Health check against the API
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://localhost:3001/v2/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 
+CMD ["pnpm", "--filter", "@kratos/api", "start"]

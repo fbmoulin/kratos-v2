@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# Environment
+.env*
+!.env.example
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Frontend (not needed for API)
+apps/web/
+
+# Tools package (not a dependency of API)
+packages/tools/
+
+# Workers source (only package.json needed for workspace resolution)
+workers/pdf-worker/src/
+workers/pdf-worker/tests/
+workers/pdf-worker/requirements.txt
+workers/pdf-worker/Dockerfile
+workers/pdf-worker/*.py
+
+# Node modules (rebuilt in Docker)
+**/node_modules
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/coverage
+**/__tests__
+
+# Build artifacts
+**/dist
+**/.turbo
+**/.next
+
+# IDE / tooling
+.claude/
+.vscode/
+.idea/
+scripts/
+e2e/
+fly.toml
+docker-compose*.yml

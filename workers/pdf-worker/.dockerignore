@@ -1,0 +1,9 @@
+__pycache__
+*.pyc
+.pytest_cache
+tests/
+smoke_test.py
+.env
+*.md
+package.json
+node_modules/
