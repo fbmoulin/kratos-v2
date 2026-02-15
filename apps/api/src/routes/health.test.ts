@@ -25,6 +25,15 @@ vi.mock('ioredis', () => ({
   default: vi.fn(() => ({ lpush: vi.fn() })),
 }));
 
+vi.mock('../services/analysis-repo.js', () => ({
+  analysisRepo: { create: vi.fn(), getByExtractionId: vi.fn() },
+}));
+
+vi.mock('@kratos/ai', () => ({
+  createAnalysisWorkflow: vi.fn(),
+  createInitialState: vi.fn(),
+}));
+
 const { default: app } = await import('../index.js');
 
 describe('Health routes', () => {
