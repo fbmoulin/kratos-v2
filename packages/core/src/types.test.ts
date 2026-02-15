@@ -6,8 +6,6 @@ import {
   DocumentStatus,
   UserRole,
   ReviewAction,
-  type GraphEntity,
-  type GraphRelation,
   type RouterResult,
   type RAGContext,
 } from './index.js';
@@ -35,9 +33,9 @@ describe('Existing enums remain intact', () => {
   });
 
   test('AIModel values', () => {
-    expect(AIModel.GEMINI_FLASH).toBe('gemini-2.0-flash');
-    expect(AIModel.CLAUDE_SONNET).toBe('claude-sonnet-4-5-20250929');
-    expect(AIModel.CLAUDE_OPUS).toBe('claude-opus-4-20250514');
+    expect(AIModel.GEMINI_FLASH).toBe('gemini-2.5-flash');
+    expect(AIModel.CLAUDE_SONNET).toBe('claude-sonnet-4');
+    expect(AIModel.CLAUDE_OPUS).toBe('claude-opus-4');
   });
 
   test('DocumentStatus values', () => {
@@ -53,29 +51,7 @@ describe('Existing enums remain intact', () => {
   });
 });
 
-describe('GraphRAG type shapes', () => {
-  test('GraphEntity is assignable', () => {
-    const entity: GraphEntity = {
-      id: 'e1',
-      name: 'CDC Art. 6',
-      entityType: 'artigo',
-      metadata: { lei: 'CDC' },
-    };
-    expect(entity.entityType).toBe('artigo');
-  });
-
-  test('GraphRelation is assignable', () => {
-    const rel: GraphRelation = {
-      id: 'r1',
-      sourceId: 'e1',
-      targetId: 'e2',
-      relationType: 'fundamenta',
-      weight: 0.9,
-      metadata: {},
-    };
-    expect(rel.relationType).toBe('fundamenta');
-  });
-
+describe('Phase 2 type shapes', () => {
   test('RouterResult is assignable', () => {
     const result: RouterResult = {
       legalMatter: LegalMatter.CIVIL,
