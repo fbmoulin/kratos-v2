@@ -1,9 +1,17 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { storageService } from '../services/storage.js';
 import { queueService } from '../services/queue.js';
 import { documentRepo } from '../services/document-repo.js';
 import { analysisRepo } from '../services/analysis-repo.js';
+import { auditRepo } from '../services/audit-repo.js';
 import { createAnalysisWorkflow, createInitialState } from '@kratos/ai';
+
+const reviewSchema = z.object({
+  action: z.enum(['approved', 'revised', 'rejected']),
+  comments: z.string().max(5000).default(''),
+  revisedContent: z.record(z.unknown()).optional(),
+});
 
 export const documentsRouter = new Hono();
 
@@ -158,4 +166,85 @@ documentsRouter.post('/:id/analyze', async (c) => {
       latencyMs: finalState.latencyMs,
     },
   });
+});
+
+// ============================================================
+// PUT /:id/review — Human-in-the-Loop review action
+// ============================================================
+
+documentsRouter.put('/:id/review', async (c) => {
+  const userId = c.get('userId');
+  const id = c.req.param('id');
+
+  const doc = await documentRepo.getById(userId, id);
+  if (!doc) {
+    return c.json({ error: { message: 'Document not found' } }, 404);
+  }
+
+  if (doc.status !== 'completed') {
+    return c.json({ error: { message: 'Document must be in completed status to review' } }, 400);
+  }
+
+  const body = await c.req.json();
+  const parsed = reviewSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: { message: 'Invalid review payload', details: parsed.error.flatten() } }, 400);
+  }
+
+  const { action, comments, revisedContent } = parsed.data;
+
+  const statusMap: Record<string, string> = {
+    approved: 'reviewed',
+    revised: 'reviewed',
+    rejected: 'pending',
+  };
+
+  const updatedDoc = await documentRepo.updateStatus(userId, id, statusMap[action]);
+
+  await auditRepo.create({
+    entityType: 'document',
+    entityId: id,
+    action: `review:${action}`,
+    payloadBefore: { status: doc.status },
+    payloadAfter: { status: statusMap[action], comments, revisedContent },
+    userId,
+  });
+
+  return c.json({ data: updatedDoc });
+});
+
+// ============================================================
+// POST /:id/export — Trigger DOCX generation
+// ============================================================
+
+documentsRouter.post('/:id/export', async (c) => {
+  const userId = c.get('userId');
+  const id = c.req.param('id');
+
+  const doc = await documentRepo.getById(userId, id);
+  if (!doc) {
+    return c.json({ error: { message: 'Document not found' } }, 404);
+  }
+
+  if (doc.status !== 'reviewed') {
+    return c.json({ error: { message: 'Document must be reviewed before export' } }, 400);
+  }
+
+  // Queue DOCX generation job
+  await queueService.enqueueDocxExport({
+    documentId: id,
+    userId,
+    fileName: doc.fileName.replace(/\.pdf$/i, '.docx'),
+  });
+
+  await auditRepo.create({
+    entityType: 'document',
+    entityId: id,
+    action: 'export:docx',
+    payloadBefore: null,
+    payloadAfter: { format: 'docx' },
+    userId,
+  });
+
+  return c.json({ data: { message: 'Export queued', documentId: id } });
 });
