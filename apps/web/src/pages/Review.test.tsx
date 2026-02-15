@@ -1,9 +1,12 @@
 import { describe, test, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import Review from './Review';
+
+const mockMutate = vi.fn();
+const mockExportMutate = vi.fn();
 
 vi.mock('react-diff-viewer-continued', () => ({
   default: ({ oldValue, newValue }: { oldValue: string; newValue: string }) =>
@@ -31,14 +34,14 @@ vi.mock('@/hooks/useDocuments', () => ({
 
 vi.mock('@/hooks/useReview', () => ({
   useReview: vi.fn(() => ({
-    mutate: vi.fn(),
+    mutate: mockMutate,
     isPending: false,
   })),
 }));
 
 vi.mock('@/hooks/useExport', () => ({
   useExport: vi.fn(() => ({
-    mutate: vi.fn(),
+    mutate: mockExportMutate,
     isPending: false,
   })),
 }));
@@ -55,6 +58,10 @@ function wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe('Review', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   test('renders 3-panel HITL layout', () => {
     render(<Review />, { wrapper });
     expect(screen.getByText(/revisão: test\.pdf/i)).toBeInTheDocument();
@@ -64,10 +71,50 @@ describe('Review', () => {
     expect(screen.getByTestId('approval-bar')).toBeInTheDocument();
   });
 
-  test('renders approval buttons', () => {
+  test('renders all three approval buttons', () => {
     render(<Review />, { wrapper });
     expect(screen.getByText('Aprovar')).toBeInTheDocument();
     expect(screen.getByText('Revisar')).toBeInTheDocument();
     expect(screen.getByText('Rejeitar')).toBeInTheDocument();
+  });
+
+  test('approve button calls review mutate with approved action', () => {
+    render(<Review />, { wrapper });
+    fireEvent.click(screen.getByText('Aprovar'));
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'approved' }),
+      expect.anything(),
+    );
+  });
+
+  test('reject button calls review mutate with rejected action', () => {
+    render(<Review />, { wrapper });
+    fireEvent.click(screen.getByText('Rejeitar'));
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'rejected' }),
+      expect.anything(),
+    );
+  });
+
+  test('revise button calls review mutate with revised action', () => {
+    render(<Review />, { wrapper });
+    fireEvent.click(screen.getByText('Revisar'));
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'revised' }),
+      expect.anything(),
+    );
+  });
+
+  test('comments textarea is available', () => {
+    render(<Review />, { wrapper });
+    const textarea = screen.getByPlaceholderText(/comentários/i);
+    expect(textarea).toBeInTheDocument();
+    fireEvent.change(textarea, { target: { value: 'Precisa revisão no item 3' } });
+    expect(textarea).toHaveValue('Precisa revisão no item 3');
+  });
+
+  test('export button is NOT shown when status is not reviewed', () => {
+    render(<Review />, { wrapper });
+    expect(screen.queryByText('Exportar DOCX')).not.toBeInTheDocument();
   });
 });
