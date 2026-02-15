@@ -1,8 +1,12 @@
 name: Deploy Staging
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy (all, api, worker, web)'
+        required: false
+        default: 'all'
 
 concurrency:
   group: deploy-staging
