@@ -2,7 +2,7 @@ import type { AgentStateType } from '../state.js';
 import type { FIRACResult } from '@kratos/core';
 import { AIModel } from '@kratos/core';
 import { createAnthropicModel } from '../../providers/anthropic.js';
-import { buildSpecialistPrompt } from '../../prompts/templates.js';
+import { buildFiracEnterprisePrompt } from '../../prompts/firac-enterprise.js';
 import { selectModel } from '../../router/model-router.js';
 
 /**
@@ -32,8 +32,8 @@ export async function specialistNode(
       .map((r) => r.content)
       .join('\n\n') || undefined;
 
-    const prompt = buildSpecialistPrompt({
-      text: state.rawText,
+    const prompt = buildFiracEnterprisePrompt({
+      rawText: state.rawText,
       legalMatter: routerResult.legalMatter,
       decisionType: routerResult.decisionType,
       ragContext: ragText,
