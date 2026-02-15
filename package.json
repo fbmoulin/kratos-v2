@@ -9,6 +9,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "seed": "tsx scripts/seed-precedents.ts",
     "e2e": "tsx scripts/test-e2e-full.ts",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.2.0",
     "dotenv": "^16.4.0",
     "eslint": "^9.20.0",
     "eslint-config-prettier": "^10.1.8",
