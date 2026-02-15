@@ -1,90 +1,103 @@
 """
-KRATOS v2 - PDF Extraction Worker
-Consumes jobs from Redis list, downloads PDF, extracts content, saves to DB.
+KRATOS v2 — PDF Extraction Worker
+Dual mode: Celery task (Docker) + Redis BRPOP loop (local dev).
+Both call process_pdf_job() which runs the extraction pipeline.
 """
 
 import json
 import logging
-import os
 import time
 
 import redis
 
-from src.models.extraction import ExtractionResult
-from src.services.database import DatabaseService
-from src.services.pdf_extraction import PdfExtractionService
-from src.services.storage import StorageService
+from src.celery_app import app
+from src.config import settings
+from src.models.extraction import DocumentStatus
+from src.pipeline import PipelineError, run_pipeline
+from src.services import database, storage
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, settings.log_level, logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("kratos.pdf-worker")
 
-QUEUE_KEY = "kratos:jobs:pdf"
 
-
-def process_pdf_job(job: dict):
-    """Process a single PDF extraction job."""
+def process_pdf_job(job: dict) -> None:
+    """Process a single PDF extraction job through the pipeline."""
     document_id = job["documentId"]
     file_path = job["filePath"]
 
-    storage = StorageService()
-    extractor = PdfExtractionService()
-    db = DatabaseService()
-
     try:
-        logger.info(f"Processing document {document_id}")
+        # 1. Downloading
+        database.update_document_status(document_id, DocumentStatus.downloading.value)
+        pdf_path = storage.download_pdf(file_path, document_id)
 
-        # 1. Download PDF from Supabase Storage
-        pdf_bytes = storage.download_pdf(file_path)
-        logger.info(f"Downloaded {len(pdf_bytes)} bytes for {document_id}")
+        # 2. Extracting
+        database.update_document_status(document_id, DocumentStatus.extracting.value)
+        result = run_pipeline(document_id, pdf_path)
 
-        # 2. Extract content
-        raw_result = extractor.extract(pdf_bytes)
+        # 3. Save extraction
+        database.save_extraction(document_id, result)
 
-        # 3. Validate with Pydantic
-        validated = ExtractionResult(**raw_result)
-
-        # 4. Save extraction to DB
-        db.save_extraction(
-            document_id=document_id,
-            content_json=validated.model_dump(),
-            extraction_method=validated.metadata.get("method", "pdfplumber"),
-            raw_text=validated.text,
-            tables_count=len(validated.tables),
-            images_count=len(validated.images),
-        )
-
-        # 5. Update document status
-        db.update_document_status(
+        # 4. Completed
+        database.update_document_status(
             document_id,
-            "completed",
-            pages=validated.metadata.get("pages", 0),
+            DocumentStatus.completed.value,
+            pages=result.metadata.total_pages,
         )
-
         logger.info(f"Completed document {document_id}")
+
+    except PipelineError as e:
+        logger.warning(f"Pipeline validation failed for {document_id}: {e}")
+        database.update_document_status(
+            document_id, DocumentStatus.failed.value, error_message=str(e)
+        )
 
     except Exception as e:
         logger.error(f"Failed document {document_id}: {e}")
         try:
-            db.update_document_status(
-                document_id, "failed", error_message=str(e)
+            database.update_document_status(
+                document_id, DocumentStatus.failed.value, error_message=str(e)
             )
         except Exception as db_err:
             logger.error(f"Failed to update status for {document_id}: {db_err}")
 
+    finally:
+        storage.cleanup_temp_file(document_id)
 
-def worker_loop():
+
+# --- Celery task (Docker deployment) ---
+
+@app.task(
+    bind=True,
+    name="extract_pdf",
+    max_retries=3,
+    default_retry_delay=30,
+    acks_late=True,
+)
+def extract_pdf_task(self, job: dict) -> dict:
+    """Celery task wrapper for PDF extraction."""
+    try:
+        process_pdf_job(job)
+        return {"status": "completed", "documentId": job["documentId"]}
+    except Exception as exc:
+        logger.error(f"Celery task failed: {exc}")
+        raise self.retry(exc=exc)
+
+
+# --- Redis BRPOP loop (local dev) ---
+
+def worker_loop() -> None:
     """Main loop — blocks on Redis BRPOP, processes jobs one at a time."""
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
-    r = redis.from_url(redis_url)
+    r = redis.from_url(settings.redis_url)
+    queue_key = settings.queue_key
 
-    logger.info(f"PDF worker started, listening on {QUEUE_KEY}")
+    logger.info(f"PDF worker started (BRPOP mode), listening on {queue_key}")
 
     while True:
         try:
-            result = r.brpop(QUEUE_KEY, timeout=5)
+            result = r.brpop(queue_key, timeout=5)
             if result:
                 _, job_json = result
                 job = json.loads(job_json)
