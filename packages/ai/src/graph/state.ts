@@ -24,6 +24,8 @@ export const AgentState = Annotation.Root({
   ragContext: Annotation<RAGContext | null>,
   /** FIRAC analysis result (null until specialist node runs) */
   firacResult: Annotation<FIRACResult | null>,
+  /** Draft minuta text (null until drafter node runs) */
+  draftResult: Annotation<string | null>,
   /** AI model used for the final analysis */
   modelUsed: Annotation<string | null>,
   /** Input tokens consumed */
@@ -56,6 +58,7 @@ export function createInitialState(input: {
     routerResult: null,
     ragContext: null,
     firacResult: null,
+    draftResult: null,
     modelUsed: null,
     tokensInput: 0,
     tokensOutput: 0,

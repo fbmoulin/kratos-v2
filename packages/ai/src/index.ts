@@ -13,6 +13,7 @@ export { supervisorDecision } from './graph/nodes/supervisor.js';
 export { routerNode } from './graph/nodes/router.js';
 export { ragNode } from './graph/nodes/rag.js';
 export { specialistNode } from './graph/nodes/specialist.js';
+export { drafterNode } from './graph/nodes/drafter.js';
 
 // Model Router
 export { classifyComplexity, selectModel, type ComplexityInput, type ModelSelection } from './router/model-router.js';
@@ -30,3 +31,4 @@ export { createGoogleModel } from './providers/google.js';
 // Prompts
 export { buildRouterPrompt, buildSpecialistPrompt, type SpecialistPromptInput } from './prompts/templates.js';
 export { buildFiracEnterprisePrompt, type FiracEnterpriseInput } from './prompts/firac-enterprise.js';
+export { buildDrafterXml, getDomainPrompt, DOMAIN_MAP, type DrafterXmlInput } from './prompts/drafter.js';

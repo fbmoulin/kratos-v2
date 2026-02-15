@@ -16,7 +16,7 @@ describe('supervisorDecision', () => {
     expect(supervisorDecision(state)).toBe('router');
   });
 
-  test('routes to "complete" when firacResult is present', () => {
+  test('routes to "drafter" when firacResult present but no draftResult', () => {
     const state: AgentStateType = {
       ...createInitialState({
         extractionId: 'ext-1',
@@ -44,6 +44,40 @@ describe('supervisorDecision', () => {
         analysis: 'Analise',
         conclusion: 'Conclusao',
       },
+    };
+
+    expect(supervisorDecision(state)).toBe('drafter');
+  });
+
+  test('routes to "complete" when draftResult is present', () => {
+    const state: AgentStateType = {
+      ...createInitialState({
+        extractionId: 'ext-1',
+        documentId: 'doc-1',
+        userId: 'usr-1',
+        rawText: 'Texto juridico...',
+      }),
+      routerResult: {
+        legalMatter: LegalMatter.CIVIL,
+        decisionType: DecisionType.SENTENCA,
+        complexity: 45,
+        confidence: 0.9,
+        selectedModel: AIModel.CLAUDE_SONNET,
+        reasoning: 'Standard civil',
+      },
+      ragContext: {
+        vectorResults: [],
+        graphResults: [],
+        fusedResults: [],
+      },
+      firacResult: {
+        facts: 'Fatos',
+        issue: 'Questao',
+        rule: 'Regra',
+        analysis: 'Analise',
+        conclusion: 'Conclusao',
+      },
+      draftResult: '# I - RELATORIO\n\nMinuta completa...',
     };
 
     expect(supervisorDecision(state)).toBe('complete');

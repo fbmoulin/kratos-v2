@@ -18,6 +18,7 @@ describe('AgentState', () => {
     expect(state.routerResult).toBeNull();
     expect(state.ragContext).toBeNull();
     expect(state.firacResult).toBeNull();
+    expect(state.draftResult).toBeNull();
     expect(state.modelUsed).toBeNull();
     expect(state.tokensInput).toBe(0);
     expect(state.tokensOutput).toBe(0);

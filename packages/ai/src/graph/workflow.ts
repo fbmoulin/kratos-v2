@@ -4,11 +4,23 @@ import { supervisorDecision } from './nodes/supervisor.js';
 import { routerNode } from './nodes/router.js';
 import { ragNode } from './nodes/rag.js';
 import { specialistNode } from './nodes/specialist.js';
+import { drafterNode } from './nodes/drafter.js';
+
+const EDGE_MAP = {
+  router: 'router',
+  rag: 'rag',
+  specialist: 'specialist',
+  drafter: 'drafter',
+  complete: END,
+  error: END,
+} as const;
 
 /**
  * Creates the compiled LangGraph analysis workflow.
  *
- * Flow: __start__ → supervisor → [router|rag|specialist|END]
+ * Flow: __start__ → supervisor → [router|rag|specialist|drafter|END]
+ *
+ * Pipeline: router → rag → specialist (FIRAC analysis) → drafter (minuta) → complete
  *
  * The supervisor inspects state and returns the next step.
  * Conditional edges dispatch to the correct node based on the decision.
@@ -18,34 +30,12 @@ export function createAnalysisWorkflow() {
     .addNode('router', routerNode)
     .addNode('rag', ragNode)
     .addNode('specialist', specialistNode)
-    .addConditionalEdges('__start__', supervisorDecision, {
-      router: 'router',
-      rag: 'rag',
-      specialist: 'specialist',
-      complete: END,
-      error: END,
-    })
-    .addConditionalEdges('router', supervisorDecision, {
-      router: 'router',
-      rag: 'rag',
-      specialist: 'specialist',
-      complete: END,
-      error: END,
-    })
-    .addConditionalEdges('rag', supervisorDecision, {
-      router: 'router',
-      rag: 'rag',
-      specialist: 'specialist',
-      complete: END,
-      error: END,
-    })
-    .addConditionalEdges('specialist', supervisorDecision, {
-      router: 'router',
-      rag: 'rag',
-      specialist: 'specialist',
-      complete: END,
-      error: END,
-    });
+    .addNode('drafter', drafterNode)
+    .addConditionalEdges('__start__', supervisorDecision, EDGE_MAP)
+    .addConditionalEdges('router', supervisorDecision, EDGE_MAP)
+    .addConditionalEdges('rag', supervisorDecision, EDGE_MAP)
+    .addConditionalEdges('specialist', supervisorDecision, EDGE_MAP)
+    .addConditionalEdges('drafter', supervisorDecision, EDGE_MAP);
 
   return graph.compile();
 }

@@ -103,6 +103,7 @@ vi.mock('@kratos/ai', () => ({
         analysis: 'Análise',
         conclusion: 'Conclusão',
       },
+      draftResult: '# I - RELATORIO\n\nMinuta completa...',
       modelUsed: 'claude-sonnet-4',
       tokensInput: 1000,
       tokensOutput: 500,
@@ -116,6 +117,7 @@ vi.mock('@kratos/ai', () => ({
     routerResult: null,
     ragContext: null,
     firacResult: null,
+    draftResult: null,
     modelUsed: null,
     tokensInput: 0,
     tokensOutput: 0,
@@ -347,6 +349,8 @@ describe('Document routes', () => {
     expect(body.data).toHaveProperty('firacResult');
     expect(body.data.firacResult).toHaveProperty('facts');
     expect(body.data.firacResult).toHaveProperty('conclusion');
+    expect(body.data).toHaveProperty('draftResult');
+    expect(body.data.draftResult).toContain('RELATORIO');
     expect(body.data).toHaveProperty('routerResult');
     expect(body.data).toHaveProperty('modelUsed');
     expect(body.data).toHaveProperty('tokens');

@@ -135,6 +135,7 @@ documentsRouter.post('/:id/analyze', async (c) => {
     reasoningTrace: finalState.routerResult?.reasoning ?? null,
     resultJson: {
       firacResult: finalState.firacResult,
+      draftResult: finalState.draftResult,
       routerResult: finalState.routerResult,
     },
     modelUsed: finalState.modelUsed ?? 'unknown',
@@ -147,6 +148,7 @@ documentsRouter.post('/:id/analyze', async (c) => {
     data: {
       analysisId: analysis.id,
       firacResult: finalState.firacResult,
+      draftResult: finalState.draftResult,
       routerResult: finalState.routerResult,
       modelUsed: finalState.modelUsed,
       tokens: {
