@@ -17,8 +17,8 @@ export default function Login() {
     try {
       await signIn(email, password);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Erro ao entrar');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao entrar');
     } finally {
       setLoading(false);
     }

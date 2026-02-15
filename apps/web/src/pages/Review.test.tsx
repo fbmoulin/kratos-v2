@@ -9,7 +9,7 @@ const mockMutate = vi.fn();
 const mockExportMutate = vi.fn();
 
 vi.mock('react-diff-viewer-continued', () => ({
-  default: ({ oldValue, newValue }: { oldValue: string; newValue: string }) =>
+  default: ({ oldValue, newValue: _newValue }: { oldValue: string; newValue: string }) =>
     createElement('div', { 'data-testid': 'mock-diff' }, `${oldValue.slice(0, 20)}...`),
   DiffMethod: { WORDS: 'words' },
 }));
