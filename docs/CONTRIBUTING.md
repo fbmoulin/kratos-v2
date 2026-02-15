@@ -38,8 +38,8 @@ O KRATOS v2 é um monorepo gerenciado com `pnpm workspaces` e `Turborepo`. Siga 
 1.  **Clone o repositório**:
 
     ```bash
-    gh repo clone KRATOS-v2
-    cd KRATOS-v2
+    gh repo clone fbmoulin/kratos-v2
+    cd kratos-v2
     ```
 
 2.  **Instale as dependências**:
@@ -99,12 +99,23 @@ git checkout -b fix/descricao-do-bug
 
 ## Testes
 
-O KRATOS v2 possui uma suíte de testes abrangente. Adicione testes para qualquer novo código que você escrever. Os testes são executados com o Jest para o frontend e a API, e com o Pytest para os workers Python.
+O KRATOS v2 possui uma suíte de testes abrangente (171+ testes). Adicione testes para qualquer novo código que você escrever. Os testes são executados com **Vitest** para todos os packages TypeScript e com Pytest para os workers Python.
 
-Para executar todos os testes, use:
+Para executar todos os testes:
 
 ```bash
-pnpm test
+pnpm test              # Roda todos os testes
+pnpm test:coverage     # Roda com relatório de cobertura (v8)
+```
+
+Para executar testes de um package específico:
+
+```bash
+pnpm --filter @kratos/api test
+pnpm --filter @kratos/web test
+pnpm --filter @kratos/ai test
+pnpm --filter @kratos/core test
+pnpm --filter @kratos/db test
 ```
 
 ## Relatando Vulnerabilidades de Segurança

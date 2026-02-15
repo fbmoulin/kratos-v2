@@ -19,24 +19,24 @@ gantt
     Banco de Dados e Segurança :done, p0_db, after p0, 10d
 
     section Fase 1: Extração de PDF
-    Fila de Jobs Assíncronos :p1_jobs, after p0_db, 7d
-    Pipeline de Extração Híbrida :p1_pipe, after p1_jobs, 14d
+    Fila de Jobs Assíncronos :done, p1_jobs, after p0_db, 7d
+    Pipeline de Extração Híbrida :done, p1_pipe, after p1_jobs, 14d
     Validação e Caching :p1_cache, after p1_pipe, 7d
 
     section Fase 2: Lógica de IA
-    Grafo de Decisão (LangGraph) :p2_graph, after p1_cache, 14d
-    RAG e Few-Shot Engine :p2_rag, after p2_graph, 10d
+    Grafo de Decisão (LangGraph) :done, p2_graph, after p1_cache, 14d
+    RAG e Few-Shot Engine :done, p2_rag, after p2_graph, 10d
     Tracing e Observabilidade (IA) :p2_trace, after p2_rag, 4d
 
     section Fase 3: Frontend e HITL
-    Dashboard e UI Principal :p3_ui, after p2_trace, 10d
-    Interface Human-in-the-Loop :p3_hitl, after p3_ui, 7d
+    Dashboard e UI Principal :done, p3_ui, after p2_trace, 10d
+    Interface Human-in-the-Loop :done, p3_hitl, after p3_ui, 7d
     Gerador de DOCX :p3_docx, after p3_hitl, 4d
 
     section Fase 4: Lançamento
-    Testes e Cobertura :p4_tests, after p3_docx, 7d
-    Monitoramento e Alertas :p4_mon, after p4_tests, 4d
-    Deploy em Produção (Beta) :p4_deploy, after p4_mon, 3d
+    Testes e Cobertura :done, p4_tests, after p3_docx, 7d
+    Monitoramento e Alertas :done, p4_mon, after p4_tests, 4d
+    Deploy em Produção (Beta) :active, p4_deploy, after p4_mon, 3d
 ```
 
 ---

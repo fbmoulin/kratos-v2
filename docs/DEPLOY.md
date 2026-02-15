@@ -1,8 +1,8 @@
 # Guia de Deploy — KRATOS v2
 
 **Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
-**Data**: 14 de Fevereiro de 2026
-**Versão**: 1.0
+**Data**: 15 de Fevereiro de 2026
+**Versão**: 2.0
 
 ---
 
@@ -24,32 +24,34 @@ O coração da nossa estratégia de deploy é o pipeline de CI/CD automatizado c
 
 ### Workflow 1: `ci.yml` (Integração Contínua)
 
--   **Gatilho**: A cada `push` em um pull request aberto para a branch `main`.
+-   **Gatilho**: A cada `push` em um pull request aberto para a branch `main`, e a cada `push` direto na `main`.
 -   **Ações**:
     1.  **Checkout do Código**: Clona o repositório.
-    2.  **Setup do Ambiente**: Instala Node.js, Python e pnpm.
-    3.  **Instalação de Dependências**: Executa `pnpm install`.
-    4.  **Lint e Formatação**: Executa `pnpm lint` para garantir a qualidade do código.
-    5.  **Testes Unitários**: Executa `pnpm test` para rodar todos os testes unitários do monorepo.
-    6.  **Build**: Executa `pnpm build` usando o Turborepo para garantir que todos os pacotes e aplicações possam ser compilados com sucesso.
+    2.  **Setup do Ambiente**: Instala Node.js 22, pnpm (via `packageManager` em `package.json`).
+    3.  **Instalação de Dependências**: Executa `pnpm install --frozen-lockfile`.
+    4.  **Build**: Executa `pnpm build` usando o Turborepo.
+    5.  **Lint**: Executa `pnpm lint` (ESLint flat config + TypeScript parser).
+    6.  **Testes com Cobertura**: Executa `pnpm test:coverage` (Vitest v8 coverage, 171+ testes).
+    7.  **Upload de Artefatos**: Faz upload dos relatórios `lcov.info` de cobertura.
 
 ### Workflow 2: `deploy-staging.yml` (Deploy para Staging)
 
 -   **Gatilho**: A cada `push` para a branch `main`.
+-   **Secrets necessários**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `FLY_API_TOKEN`, `STAGING_API_URL`
 -   **Ações**:
-    1.  **Executa o workflow de CI**: Garante que todos os testes e verificações passaram.
-    2.  **Deploy do Frontend**: Utiliza a [Vercel CLI](https://vercel.com/docs/cli) para fazer o deploy da aplicação `web` para o ambiente de staging na Vercel.
-    3.  **Deploy do Backend e Workers**: Utiliza a [Fly CLI](https://fly.io/docs/hands-on/launch-app/) para fazer o deploy dos serviços `api` e `pdf-worker` para o ambiente de staging no Fly.io.
-    4.  **Testes de Integração**: (Opcional, mas recomendado) Executa uma suíte de testes de integração (ex: Playwright) contra o ambiente de staging para validar o fluxo completo.
+    1.  **Build e Testes**: Instala dependências, builda e roda testes.
+    2.  **Deploy do Frontend (Vercel)**: Instala Vercel CLI, faz pull do projeto, build com `VITE_API_BASE_URL` e deploy.
+    3.  **Deploy do Backend (Fly.io)**: Instala flyctl e executa `fly deploy` usando `fly.toml` (região `gru`, health check em `/v2/health`).
 
 ### Workflow 3: `deploy-production.yml` (Deploy para Produção)
 
--   **Gatilho**: Manual, através da criação de uma `tag` no formato `vX.Y.Z` (ex: `v2.0.0`).
+-   **Gatilho**: Criação de `tag` no formato `v*` (ex: `v2.0.0`).
+-   **Secrets necessários**: mesmos do staging + `PRODUCTION_API_URL`
 -   **Ações**:
-    1.  **Aprovação Manual**: O workflow pode ser configurado para exigir uma aprovação manual de um mantenedor do projeto antes de prosseguir.
-    2.  **Deploy do Frontend**: Promove o deploy de staging para produção na Vercel.
-    3.  **Deploy do Backend e Workers**: Faz o deploy das imagens de container mais recentes para o ambiente de produção no Fly.io.
-    4.  **Migrações de Banco de Dados**: Executa quaisquer migrações de banco de dados pendentes de forma segura.
+    1.  **Testes pré-deploy**: Job `test` roda antes de qualquer deploy.
+    2.  **Aprovação Manual**: Usa `environment: production` do GitHub, que exige aprovação de um maintainer.
+    3.  **Deploy do Frontend (Vercel)**: Deploy com `--prod` flag.
+    4.  **Deploy do Backend (Fly.io)**: Deploy com `fly deploy`.
 
 ## 4. Rollbacks
 
@@ -60,6 +62,7 @@ O coração da nossa estratégia de deploy é o pipeline de CI/CD automatizado c
 
 Após o deploy, o monitoramento contínuo é essencial para garantir a saúde da aplicação.
 
--   **Error Tracking**: Integração com o **Sentry** para capturar e alertar sobre erros no frontend e no backend em tempo real.
--   **Métricas de Performance**: Utilização do **Prometheus** para coletar métricas de performance da API e dos workers, e do **Grafana** para visualizar essas métricas em dashboards.
--   **Alertas**: Configuração de alertas no Grafana ou em uma ferramenta como o PagerDuty para notificar a equipe sobre anomalias, como um aumento na taxa de erros, alta latência ou consumo excessivo de CPU/memória.
+-   **Error Tracking (Sentry)**: ✅ Integrado no frontend (`@sentry/react` com ErrorBoundary, session replay) e no backend (`@sentry/node` via `app.onError` com contexto de request). Requer `SENTRY_DSN` (backend) e `VITE_SENTRY_DSN` (frontend).
+-   **Health Checks**: ✅ Endpoint `/v2/health/ready` verifica DB e Redis com status 200/503. Endpoint `/v2/health/metrics` expõe request count, error rate e avg latency em JSON.
+-   **Métricas de Performance**: Planejado: Prometheus para coletar métricas da API e workers, Grafana para dashboards.
+-   **Alertas**: Planejado: Configuração de alertas para anomalias (taxa de erros, latência, CPU/memória).

@@ -95,20 +95,27 @@ Cada diagrama possui versão Mermaid (.mmd) e renderizada (.png).
 - [SUPABASE_INFO.md](SUPABASE_INFO.md) - Configuração DB
 - [CHANGELOG.md](CHANGELOG.md) - v2.0.1 com correções Critical/High
 
-### Fase 1 - Pipeline de PDF (Em planejamento)
+### Fase 1 - Pipeline de PDF ✅ Concluída (scaffold)
 - [EXECUTION_PLAN.md](EXECUTION_PLAN.md) - Seção Fase 1
 - [TECHNICAL_ANALYSIS.md](TECHNICAL_ANALYSIS.md) - Análise de ferramentas PDF
 
-### Fase 2 - Agentes de IA (Planejado)
+### Fase 2 - Agentes de IA ✅ Concluída
 - [EXECUTION_PLAN.md](EXECUTION_PLAN.md) - Seção Fase 2
 - Diagrama: `ai_agents_flow.png`
+- 70 testes AI (15 suites), LangGraph pipeline completo
 
-### Fase 3 - Frontend e HITL (Planejado)
+### Fase 2.5 - E2E Wiring ✅ Concluída
+- 100 precedentes STJ com embeddings, seed + E2E scripts
+
+### Fase 3 - Frontend e HITL ✅ Concluída
 - [EXECUTION_PLAN.md](EXECUTION_PLAN.md) - Seção Fase 3
+- React 19 + Vite 6 + Tailwind 4 + shadcn/ui, 28 testes web
+- [plans/2026-02-15-phase3-frontend-design.md](plans/2026-02-15-phase3-frontend-design.md) - Design doc
 
-### Fase 4 - Deploy (Planejado)
+### Fase 4 - Tests, Monitoring & Deploy ✅ Concluída
 - [DEPLOY.md](DEPLOY.md) - Procedimentos
 - [EXECUTION_PLAN.md](EXECUTION_PLAN.md) - Seção Fase 4
+- 171 testes totais, Sentry integrado, CI/CD com coverage, deploy workflows
 
 ---
 
@@ -148,6 +155,6 @@ Se você tem tempo limitado, leia estes 5 documentos primeiro:
 
 ---
 
-**Total de documentação**: 18 arquivos Markdown + 10 arquivos de diagrama + 2 scripts = **~95KB** de conhecimento estruturado
+**Total de documentação**: 19 arquivos Markdown + 10 arquivos de diagrama + 4 scripts = **~110KB** de conhecimento estruturado
 
-**Última atualização**: 14 de Fevereiro de 2026
+**Última atualização**: 15 de Fevereiro de 2026

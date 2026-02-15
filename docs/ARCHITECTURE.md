@@ -1,8 +1,8 @@
 # Arquitetura do Sistema KRATOS v2
 
 **Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
-**Data**: 14 de Fevereiro de 2026
-**Versão**: 2.0
+**Data**: 15 de Fevereiro de 2026
+**Versão**: 2.4
 
 ---
 
@@ -13,7 +13,7 @@ O KRATOS v2 é projetado como um sistema distribuído, orientado a eventos e cen
 A arquitetura pode ser dividida em quatro camadas principais:
 
 1.  **Camada de Apresentação (Frontend)**: Uma Single-Page Application (SPA) reativa construída com React 19, responsável pela interação com o usuário, upload de documentos e a interface de Human-in-the-Loop (HITL).
-2.  **Camada de Orquestração e API (Backend)**: Um serviço de API (Node.js/Express ou Python/FastAPI) que serve como ponto de entrada para o sistema, gerenciando a autenticação, o fluxo de dados e a comunicação com a fila de tarefas.
+2.  **Camada de Orquestração e API (Backend)**: Um serviço de API (Node.js/Hono 4.7) que serve como ponto de entrada para o sistema, gerenciando a autenticação (Supabase Auth), o fluxo de dados e a comunicação com a fila de tarefas.
 3.  **Camada de Processamento Assíncrono (Workers)**: Workers dedicados (Python/Celery) que executam as tarefas pesadas e de longa duração, como a extração de conteúdo de PDFs e a execução dos pipelines de IA.
 4.  **Camada de Persistência e Dados (Infraestrutura)**: Um conjunto de serviços gerenciados, incluindo um banco de dados PostgreSQL com capacidades vetoriais, um broker de mensagens Redis, e serviços de armazenamento de arquivos.
 
@@ -28,8 +28,8 @@ Para gerenciar a complexidade de múltiplos pacotes e aplicações, o KRATOS v2 
 ```
 kratos/
 ├── apps/
-│   ├── api/          # Backend (FastAPI)
-│   └── web/          # Frontend (React 19)
+│   ├── api/          # Backend (Hono 4.7 + Node.js)
+│   └── web/          # Frontend (React 19 + Vite 6 + Tailwind 4)
 ├── packages/
 │   ├── core/         # Lógica de negócio compartilhada, tipos e constantes
 │   ├── db/           # Schema do banco de dados, migrations e ORM (Drizzle)
@@ -127,5 +127,7 @@ O pipeline de integração e entrega contínua é automatizado com **GitHub Acti
 
 ### 6.2. Observabilidade e Tracing
 
--   **LangSmith**: Integrado a todos os agentes de IA para fornecer um tracing detalhado (Chain-of-Thought) de cada decisão, permitindo a depuração, o monitoramento de performance e a análise de custos.
+-   **Sentry**: Integrado no frontend (`@sentry/react` com ErrorBoundary) e no backend (`@sentry/node` via `app.onError`) para error tracking em tempo real, session replay e performance monitoring.
+-   **Health Checks**: Endpoint `/v2/health/ready` verifica conectividade com DB e Redis, retornando 503 se degradado. Endpoint `/v2/health/metrics` expõe request count, error rate e latência média.
+-   **LangSmith**: Planejado para integração com agentes de IA, fornecendo tracing detalhado (Chain-of-Thought) de cada decisão.
 -   **Logging Estruturado**: Todas as aplicações e workers geram logs estruturados em JSON, que podem ser agregados em uma plataforma de observabilidade (ex: Datadog, New Relic) para monitoramento em tempo real e criação de alertas.
