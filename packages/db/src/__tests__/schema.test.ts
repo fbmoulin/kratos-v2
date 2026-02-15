@@ -17,12 +17,13 @@ import {
 } from '../schema/documents';
 
 /** Helper to get column names from a Drizzle table */
-function getColumnNames(table: Record<string, unknown>): string[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getColumnNames(table: any): string[] {
   return Object.keys(table).filter(
     (key) =>
       typeof table[key] === 'object' &&
       table[key] !== null &&
-      'name' in (table[key] as Record<string, unknown>),
+      'name' in table[key],
   );
 }
 
