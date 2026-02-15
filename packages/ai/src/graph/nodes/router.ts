@@ -1,6 +1,6 @@
 import type { AgentStateType } from '../state.js';
 import type { RouterResult } from '@kratos/core';
-import { LegalMatter, DecisionType } from '@kratos/core';
+import { LegalMatter, DecisionType, AIModel } from '@kratos/core';
 import { createGoogleModel } from '../../providers/google.js';
 import { buildRouterPrompt } from '../../prompts/templates.js';
 import { classifyComplexity, selectModel } from '../../router/model-router.js';
@@ -18,7 +18,7 @@ export async function routerNode(
   state: AgentStateType,
 ): Promise<Partial<AgentStateType>> {
   try {
-    const model = createGoogleModel('gemini-2.5-flash');
+    const model = createGoogleModel(AIModel.GEMINI_FLASH);
     const prompt = buildRouterPrompt(state.rawText);
     const response = await model.invoke(prompt);
 

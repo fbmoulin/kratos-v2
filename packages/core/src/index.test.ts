@@ -40,9 +40,9 @@ describe('@kratos/core enums', () => {
   });
 
   test('AIModel has correct values', () => {
-    expect(AIModel.GEMINI_FLASH).toBe('gemini-2.5-flash');
-    expect(AIModel.CLAUDE_SONNET).toBe('claude-sonnet-4');
-    expect(AIModel.CLAUDE_OPUS).toBe('claude-opus-4');
+    expect(AIModel.GEMINI_FLASH).toBe('gemini-2.0-flash');
+    expect(AIModel.CLAUDE_SONNET).toBe('claude-sonnet-4-5-20250929');
+    expect(AIModel.CLAUDE_OPUS).toBe('claude-opus-4-20250514');
   });
 });
 

@@ -73,7 +73,7 @@ describe('specialistNode', () => {
     expect(result.firacResult!.analysis).toBeTruthy();
     expect(result.firacResult!.conclusion).toBeTruthy();
     expect(result.currentStep).toBe('complete');
-    expect(result.modelUsed).toBe('claude-sonnet-4');
+    expect(result.modelUsed).toBe('claude-sonnet-4-5-20250929');
     expect(result.tokensInput).toBe(1500);
     expect(result.tokensOutput).toBe(800);
     expect(result.latencyMs).toBeGreaterThanOrEqual(0);

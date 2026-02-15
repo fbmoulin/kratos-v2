@@ -49,7 +49,7 @@ describe('createGoogleModel', () => {
     const model = createGoogleModel('gemini-2.5-flash');
     expect(ChatGoogleGenerativeAI).toHaveBeenCalledWith(
       expect.objectContaining({
-        modelName: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash',
       }),
     );
     expect(model).toBeDefined();

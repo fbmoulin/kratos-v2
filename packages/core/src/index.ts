@@ -68,12 +68,12 @@ export enum DecisionType {
 
 /** AI model identifiers used for analysis and routing. */
 export enum AIModel {
-  /** Google Gemini 2.5 Flash — fast, cost-effective for extraction + OCR */
-  GEMINI_FLASH = 'gemini-2.5-flash',
-  /** Anthropic Claude Sonnet 4 — balanced for standard legal analysis */
-  CLAUDE_SONNET = 'claude-sonnet-4',
+  /** Google Gemini 2.0 Flash — fast, cost-effective for extraction + OCR */
+  GEMINI_FLASH = 'gemini-2.0-flash',
+  /** Anthropic Claude Sonnet 4.5 — balanced for standard legal analysis */
+  CLAUDE_SONNET = 'claude-sonnet-4-5-20250929',
   /** Anthropic Claude Opus 4 — highest quality for complex cases */
-  CLAUDE_OPUS = 'claude-opus-4',
+  CLAUDE_OPUS = 'claude-opus-4-20250514',
 }
 
 // ============================================================

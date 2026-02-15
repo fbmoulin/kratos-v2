@@ -5,7 +5,7 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
  */
 export function createGoogleModel(modelId: string) {
   return new ChatGoogleGenerativeAI({
-    modelName: modelId,
+    model: modelId,
     temperature: 0.2,
     maxOutputTokens: 4096,
   });
