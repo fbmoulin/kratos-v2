@@ -19,6 +19,8 @@ export {
   precedents,
   promptVersions,
   auditLogs,
+  graphEntities,
+  graphRelations,
 } from './schema/documents.js';
 
 export { db, queryClient } from './client.js';

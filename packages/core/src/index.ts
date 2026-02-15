@@ -54,14 +54,26 @@ export enum ReviewAction {
   REJECTED = 'rejected',
 }
 
+/** Decision type classification for judicial documents. */
+export enum DecisionType {
+  /** Provisional injunctive relief */
+  LIMINAR = 'liminar',
+  /** Final judgment on merits */
+  SENTENCA = 'sentenca',
+  /** Procedural order (non-substantive) */
+  DESPACHO = 'despacho',
+  /** Appellate court decision */
+  ACORDAO = 'acordao',
+}
+
 /** AI model identifiers used for analysis and routing. */
 export enum AIModel {
-  /** Google Gemini 2.5 Flash — fast, cost-effective for extraction + OCR */
-  GEMINI_FLASH = 'gemini-2.5-flash',
-  /** Anthropic Claude Sonnet 4 — balanced for standard legal analysis */
-  CLAUDE_SONNET = 'claude-sonnet-4',
+  /** Google Gemini 2.0 Flash — fast, cost-effective for extraction + OCR */
+  GEMINI_FLASH = 'gemini-2.0-flash',
+  /** Anthropic Claude Sonnet 4.5 — balanced for standard legal analysis */
+  CLAUDE_SONNET = 'claude-sonnet-4-5-20250929',
   /** Anthropic Claude Opus 4 — highest quality for complex cases */
-  CLAUDE_OPUS = 'claude-opus-4',
+  CLAUDE_OPUS = 'claude-opus-4-20250514',
 }
 
 // ============================================================
@@ -150,6 +162,45 @@ export interface ReviewPayload {
   comments: string;
   /** Only present when action is `REVISED` */
   revisedContent?: Record<string, unknown>;
+}
+
+// ============================================================
+// GraphRAG Types
+// ============================================================
+
+/** A node in the PostgreSQL-native knowledge graph. */
+export interface GraphEntity {
+  id: string;
+  name: string;
+  entityType: 'lei' | 'artigo' | 'sumula' | 'principio' | 'tribunal' | 'tema';
+  metadata: Record<string, unknown>;
+}
+
+/** A directed edge in the knowledge graph connecting two entities. */
+export interface GraphRelation {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  relationType: 'cita' | 'fundamenta' | 'revoga' | 'complementa' | 'contraria' | 'regulamenta';
+  weight: number;
+  metadata: Record<string, unknown>;
+}
+
+/** Result from the router agent: classification + model selection. */
+export interface RouterResult {
+  legalMatter: LegalMatter;
+  decisionType: DecisionType;
+  complexity: number;
+  confidence: number;
+  selectedModel: AIModel;
+  reasoning: string;
+}
+
+/** Combined RAG context from vector + graph search with RRF fusion. */
+export interface RAGContext {
+  vectorResults: Array<{ content: string; score: number; source: string }>;
+  graphResults: Array<{ content: string; score: number; path: string[] }>;
+  fusedResults: Array<{ content: string; score: number; source: string }>;
 }
 
 // ============================================================
