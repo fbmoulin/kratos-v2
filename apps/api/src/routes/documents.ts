@@ -16,6 +16,22 @@ const reviewSchema = z.object({
 export const documentsRouter = new Hono();
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46]; // %PDF
+
+/** Validate file starts with PDF magic bytes (%PDF) */
+function isPdfContent(buffer: Buffer): boolean {
+  if (buffer.length < 4) return false;
+  return PDF_MAGIC_BYTES.every((byte, i) => buffer[i] === byte);
+}
+
+/** Sanitize filename: keep only safe chars, limit length */
+function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_{2,}/g, '_')
+    .replace(/^[._-]+/, '')
+    .slice(0, 200);
+}
 
 documentsRouter.get('/', async (c) => {
   const userId = c.get('userId');
@@ -47,10 +63,17 @@ documentsRouter.post('/', async (c) => {
   const documentId = crypto.randomUUID();
   const fileBuffer = Buffer.from(await file.arrayBuffer());
 
+  // Validate PDF magic bytes — prevents spoofed MIME types
+  if (!isPdfContent(fileBuffer)) {
+    return c.json({ error: { message: 'File content is not a valid PDF' } }, 400);
+  }
+
+  const safeName = sanitizeFileName(file.name);
+
   const { path } = await storageService.uploadDocument({
     userId,
     documentId,
-    fileName: file.name,
+    fileName: safeName,
     fileBuffer,
     mimeType: file.type,
   });
@@ -58,7 +81,7 @@ documentsRouter.post('/', async (c) => {
   const doc = await documentRepo.create({
     id: documentId,
     userId,
-    fileName: file.name,
+    fileName: safeName,
     filePath: path,
     fileSize: file.size,
     mimeType: file.type,
@@ -68,7 +91,7 @@ documentsRouter.post('/', async (c) => {
     documentId: doc.id,
     userId: doc.userId,
     filePath: doc.filePath!,
-    fileName: doc.fileName,
+    fileName: safeName,
   });
 
   return c.json({ data: doc }, 201);

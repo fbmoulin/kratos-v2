@@ -15,7 +15,11 @@ import redis
 import requests
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "http://127.0.0.1:54321")
-SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+if not SERVICE_KEY:
+    print("[ERROR] SUPABASE_SERVICE_ROLE_KEY env var is required")
+    sys.exit(1)
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 QUEUE_KEY = "kratos:jobs:pdf"
 

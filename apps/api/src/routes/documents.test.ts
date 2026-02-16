@@ -192,9 +192,10 @@ describe('Document routes', () => {
 
   test('POST /v2/documents rejects file over 50MB', async () => {
     const formData = new FormData();
-    const bigBlob = new Blob([new Uint8Array(51 * 1024 * 1024)], {
-      type: 'application/pdf',
-    });
+    const bigContent = new Uint8Array(51 * 1024 * 1024);
+    // Set PDF magic bytes so it doesn't fail on content check first
+    bigContent[0] = 0x25; bigContent[1] = 0x50; bigContent[2] = 0x44; bigContent[3] = 0x46;
+    const bigBlob = new Blob([bigContent], { type: 'application/pdf' });
     formData.append('file', bigBlob, 'huge.pdf');
 
     const res = await app.request('/v2/documents', {
@@ -204,6 +205,46 @@ describe('Document routes', () => {
     });
 
     expect(res.status).toBe(400);
+  });
+
+  test('POST /v2/documents rejects file with invalid magic bytes', async () => {
+    const formData = new FormData();
+    formData.append(
+      'file',
+      new Blob(['not a real pdf'], { type: 'application/pdf' }),
+      'fake.pdf',
+    );
+
+    const res = await app.request('/v2/documents', {
+      method: 'POST',
+      headers: authHeader,
+      body: formData,
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toContain('not a valid PDF');
+  });
+
+  test('POST /v2/documents sanitizes filename', async () => {
+    const formData = new FormData();
+    formData.append(
+      'file',
+      new Blob(['%PDF-1.4 content'], { type: 'application/pdf' }),
+      '../../../etc/passwd.pdf',
+    );
+
+    const res = await app.request('/v2/documents', {
+      method: 'POST',
+      headers: authHeader,
+      body: formData,
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    // Filename should be sanitized — no path traversal chars
+    expect(body.data.fileName).not.toContain('..');
+    expect(body.data.fileName).not.toContain('/');
   });
 
   test('GET /v2/documents returns paginated list from DB', async () => {
