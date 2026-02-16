@@ -69,7 +69,7 @@ healthRouter.get('/ready', async (c) => {
 
   // Redis check
   try {
-    const Redis = (await import('ioredis')).default;
+    const { Redis } = await import('ioredis');
     const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
       connectTimeout: 2000,
       lazyConnect: true,

@@ -4,7 +4,7 @@ const mockLpush = vi.fn().mockResolvedValue(1);
 const mockQuit = vi.fn().mockResolvedValue('OK');
 
 vi.mock('ioredis', () => ({
-  default: vi.fn(() => ({
+  Redis: vi.fn(() => ({
     lpush: mockLpush,
     quit: mockQuit,
   })),
