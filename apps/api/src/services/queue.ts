@@ -1,6 +1,8 @@
 import Redis from 'ioredis';
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  family: 0, // dual-stack: try IPv6 first, fallback to IPv4 (Railway private networking is IPv6)
+});
 
 const QUEUE_KEY = 'kratos:jobs:pdf';
 const DOCX_QUEUE_KEY = 'kratos:jobs:docx';

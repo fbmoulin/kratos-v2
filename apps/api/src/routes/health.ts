@@ -73,6 +73,7 @@ healthRouter.get('/ready', async (c) => {
     const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
       connectTimeout: 2000,
       lazyConnect: true,
+      family: 0,
     });
     await redis.ping();
     checks.redis = 'ok';
