@@ -1,1 +1,7 @@
+[build]
+dockerfilePath = "Dockerfile"
 
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+# No healthcheckPath — background worker with no HTTP server
