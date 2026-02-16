@@ -99,7 +99,7 @@ git checkout -b fix/descricao-do-bug
 
 ## Testes
 
-O KRATOS v2 possui uma suíte de testes abrangente (171+ testes). Adicione testes para qualquer novo código que você escrever. Os testes são executados com **Vitest** para todos os packages TypeScript e com Pytest para os workers Python.
+O KRATOS v2 possui uma suíte de testes abrangente (171+ testes em 5 packages). Adicione testes para qualquer novo código que você escrever. Os testes são executados com **Vitest** (v8 coverage) para todos os packages TypeScript e com Pytest para os workers Python.
 
 Para executar todos os testes:
 

@@ -201,7 +201,10 @@ Critical env vars (see `.env.example` and `docs/ENV.md`):
 ## CI/CD
 
 GitHub Actions workflows (`.github/workflows/`):
-- **CI** (`ci.yml`): On push/PR to `main`/`develop` — pnpm install, turbo build, lint, test (Node 22)
+- **CI** (`ci.yml`): On push/PR to `main`/`develop` — build, lint, test:coverage (Vitest v8), upload coverage artifacts
+- **Deploy Staging** (`deploy-staging.yml`): On push to `main` — Vercel (web) + Fly.io (api) auto-deploy
+- **Deploy Production** (`deploy-production.yml`): On tag `v*` — pre-deploy tests, manual approval via GitHub environment, then Vercel --prod + Fly.io
+- **Integration** (`integration.yml`): Nightly/manual — docker-compose (Postgres + Redis), DB push, API + worker, full test suite
 
 ### Seed & E2E Scripts
 ```bash
@@ -249,9 +252,11 @@ docker compose --profile worker up -d
 | Package | Tests | Suites | Notes |
 |---------|-------|--------|-------|
 | `@kratos/ai` | 70 | 15 | prompts, graph nodes, RAG, router, providers, workflow |
-| `@kratos/api` | 23 | 5 | health, documents CRUD, auth, storage, queue |
+| `@kratos/web` | 28 | 9 | Login, Dashboard, Review, components, hooks |
+| `@kratos/api` | 24 | 5 | health, documents CRUD, auth, storage, queue, analysis, review |
+| `@kratos/db` | 31 | 8 | schema validation (tables, columns, constraints, types) |
 | `@kratos/core` | 18 | 2 | enums, constants, types |
-| **Total** | **111** | **22** | |
+| **Total** | **171+** | **39** | Coverage via Vitest v8, thresholds enforced in CI |
 
 ## Database Schema (Supabase Postgres + pgvector)
 

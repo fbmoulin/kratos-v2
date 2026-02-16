@@ -115,7 +115,7 @@ Cada diagrama possui versão Mermaid (.mmd) e renderizada (.png).
 ### Fase 4 - Tests, Monitoring & Deploy ✅ Concluída
 - [DEPLOY.md](DEPLOY.md) - Procedimentos
 - [EXECUTION_PLAN.md](EXECUTION_PLAN.md) - Seção Fase 4
-- 171 testes totais, Sentry integrado, CI/CD com coverage, deploy workflows
+- 171+ testes totais (70 AI + 28 Web + 24 API + 31 DB + 18 Core), Sentry integrado, CI/CD com coverage, 4 deploy workflows
 
 ---
 
@@ -155,6 +155,6 @@ Se você tem tempo limitado, leia estes 5 documentos primeiro:
 
 ---
 
-**Total de documentação**: 19 arquivos Markdown + 10 arquivos de diagrama + 4 scripts = **~110KB** de conhecimento estruturado
+**Total de documentação**: 20 arquivos Markdown + 10 arquivos de diagrama + 4 scripts = **~115KB** de conhecimento estruturado
 
 **Última atualização**: 15 de Fevereiro de 2026

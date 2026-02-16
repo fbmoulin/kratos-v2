@@ -7,26 +7,6 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
-## [2.0.1] - 2026-02-14
-
-### Adicionado
-- **ESLint flat config** (`eslint.config.js`): TypeScript parser, Prettier compat, root-level shared config
-- **Drizzle DB client** (`packages/db/src/client.ts`): postgres + drizzle-orm singleton, exported from index
-- **pgvector embedding column**: `vector(1536)` custom type on `precedents` table via Drizzle schema
-- **Test infrastructure**: Vitest configs for `@kratos/api` and `@kratos/core`, 18 tests across 3 suites
-- **CI/CD pipeline** (`.github/workflows/ci.yml`): pnpm install, turbo build/lint/test on Node 22
-- **Auth middleware wired**: `authMiddleware` applied to `/documents/*` — all document routes now protected
-
-### Corrigido
-- **Supabase client singleton**: `createClient()` moved to module scope (was per-request, wasteful)
-- **Rate limiter memory leak**: Added 60s `setInterval` cleanup with `unref()` for expired entries
-- **Build artifacts in source**: Deleted `index.js`, `index.d.ts`, `.map` files from `packages/core/src/`
-- **Server start guard**: `serve()` wrapped with `NODE_ENV !== 'test'` to enable Vitest imports
-
-### Modificado
-- Root `package.json`: Added `"type": "module"` to eliminate ESM parsing warnings
-- `@kratos/core` `package.json`: Added vitest devDep, updated test script from echo to `vitest run`
-
 ## [Unreleased]
 
 _Nada ainda._
@@ -45,6 +25,7 @@ _Nada ainda._
 - **Endpoint de métricas**: `/v2/health/metrics` com request count, error rate, avg response time
 - **Deploy staging workflow** (`deploy-staging.yml`): auto-deploy Vercel + Fly.io on push to main
 - **Deploy production workflow** (`deploy-production.yml`): manual approval via GitHub environments on tag `v*`
+- **Integration workflow** (`integration.yml`): nightly docker-compose (Postgres + Redis) integration tests
 - **Fly.io config** (`fly.toml`): região `gru`, health check em `/v2/health`, auto-stop machines
 - **Vercel config** (`apps/web/vercel.json`): SPA rewrites, Vite framework
 - **Playwright scaffold**: `e2e/` com config e smoke tests (requer infra para execução)
@@ -91,6 +72,28 @@ _Nada ainda._
 - **Domain prompt registry**: GENERICO, BANCARIO, CONSUMIDOR com fallback
 - **Providers**: Anthropic (Claude Sonnet/Opus) e Google (Gemini Flash) via LangChain
 - **70 testes AI** (15 suites): prompts, graph nodes, RAG, router, providers, state
+
+---
+
+## [2.0.1] - 2026-02-14
+
+### Adicionado
+- **ESLint flat config** (`eslint.config.js`): TypeScript parser, Prettier compat, root-level shared config
+- **Drizzle DB client** (`packages/db/src/client.ts`): postgres + drizzle-orm singleton, exported from index
+- **pgvector embedding column**: `vector(1536)` custom type on `precedents` table via Drizzle schema
+- **Test infrastructure**: Vitest configs for `@kratos/api` and `@kratos/core`, 18 tests across 3 suites
+- **CI/CD pipeline** (`.github/workflows/ci.yml`): pnpm install, turbo build/lint/test on Node 22
+- **Auth middleware wired**: `authMiddleware` applied to `/documents/*` — all document routes now protected
+
+### Corrigido
+- **Supabase client singleton**: `createClient()` moved to module scope (was per-request, wasteful)
+- **Rate limiter memory leak**: Added 60s `setInterval` cleanup with `unref()` for expired entries
+- **Build artifacts in source**: Deleted `index.js`, `index.d.ts`, `.map` files from `packages/core/src/`
+- **Server start guard**: `serve()` wrapped with `NODE_ENV !== 'test'` to enable Vitest imports
+
+### Modificado
+- Root `package.json`: Added `"type": "module"` to eliminate ESM parsing warnings
+- `@kratos/core` `package.json`: Added vitest devDep, updated test script from echo to `vitest run`
 
 ---
 

@@ -1,7 +1,7 @@
 # KRATOS - Sistema de Automação Jurídica de Elite
 
-![Versão](https://img.shields.io/badge/version-2.0.0-blue)
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
+![Versão](https://img.shields.io/badge/version-2.4.0-blue)
+![Status](https://img.shields.io/badge/status-beta-brightgreen)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/seu-usuario/kratos/ci.yml?branch=main)](https://github.com/seu-usuario/kratos/actions)
 [![Licença](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -143,18 +143,19 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 
 | Fase | Status | Descrição |
 | :--- | :--- | :--- |
-| **Fase 0** | Concluída | Fundação, monorepo, CI/CD, segurança |
-| **Fase 1** | Concluída | API (Hono), documents CRUD, upload, PDF worker scaffold |
-| **Fase 2** | Concluída | LangGraph pipeline (supervisor → router → RAG → FIRAC+ → drafter), model-router, 70 testes AI |
-| **Fase 2.5** | Concluída | DB schema aplicado (8 tabelas + pgvector), 100 precedentes STJ seedados, scripts E2E |
-| **Fase 3** | Em planejamento | Frontend (React 19), HITL review UI, PDF extraction pipeline |
-| **Fase 4** | Futura | Testes de integração, monitoramento, deploy |
+| **Fase 0** | ✅ Concluída | Fundação, monorepo, CI/CD, segurança |
+| **Fase 1** | ✅ Concluída | API (Hono), documents CRUD, upload, PDF worker scaffold |
+| **Fase 2** | ✅ Concluída | LangGraph pipeline (supervisor → router → RAG → FIRAC+ → drafter), model-router, 70 testes AI |
+| **Fase 2.5** | ✅ Concluída | DB schema aplicado (8 tabelas + pgvector), 100 precedentes STJ seedados, scripts E2E |
+| **Fase 3** | ✅ Concluída | Frontend (React 19 + Vite 6 + Tailwind 4 + shadcn/ui), Dashboard, HITL review UI, 28 testes web |
+| **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Fly.io), 171+ testes |
 
 ### Métricas Atuais
-- **88 testes** passando (70 AI + 9 API + 9 Core)
+- **171+ testes** passando (70 AI + 24 API + 28 Web + 18 Core + 31 DB)
+- **32 test files** across 5 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d
-- **7/7 builds** OK (Turborepo)
+- **4 CI/CD workflows** (CI, deploy-staging, deploy-production, integration)
 
 Para uma visão detalhada do roadmap, consulte o arquivo `docs/ROADMAP.md`.
 
