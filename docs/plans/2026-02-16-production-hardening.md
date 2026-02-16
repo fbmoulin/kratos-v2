@@ -12,7 +12,7 @@
 
 ## Sprint 1: Security Hardening
 
-### Task 1: Auth Bypass Production Guard
+### Task 1: Auth Bypass Production Guard ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/middleware/auth.ts:15-20`
@@ -135,7 +135,7 @@ is unreachable in production, even if env var is accidentally set."
 
 ---
 
-### Task 2: CORS Origin Validation at Startup
+### Task 2: CORS Origin Validation at Startup ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/index.ts:42-52`
@@ -176,7 +176,7 @@ DATABASE_URL, or REDIS_URL are missing or misconfigured."
 
 ---
 
-### Task 3: Apply Rate Limiter to Routes
+### Task 3: Apply Rate Limiter to Routes ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/index.ts` (import + apply)

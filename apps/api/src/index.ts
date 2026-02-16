@@ -38,6 +38,18 @@ import { logger } from './lib/logger.js';
 
 initSentry();
 
+// Validate critical env vars in production — fail fast
+if (process.env.NODE_ENV === 'production') {
+  const required = ['SUPABASE_URL', 'SUPABASE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL', 'REDIS_URL'];
+  const missing = required.filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required env vars: ${missing.join(', ')}`);
+  }
+  if (!process.env.CORS_ORIGIN || process.env.CORS_ORIGIN.includes('localhost')) {
+    throw new Error('CORS_ORIGIN must be set to a non-localhost URL in production');
+  }
+}
+
 const app = new Hono<AppEnv>().basePath('/v2');
 
 // Global middleware — applied to all routes

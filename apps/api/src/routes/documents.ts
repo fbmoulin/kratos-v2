@@ -7,6 +7,8 @@ import { documentRepo } from '../services/document-repo.js';
 import { analysisRepo } from '../services/analysis-repo.js';
 import { auditRepo } from '../services/audit-repo.js';
 import { createAnalysisWorkflow, createInitialState } from '@kratos/ai';
+import { rateLimiter } from '../middleware/rate-limit.js';
+import { RATE_LIMITS } from '@kratos/core';
 
 const reviewSchema = z.object({
   action: z.enum(['approved', 'revised', 'rejected']),
@@ -44,7 +46,7 @@ documentsRouter.get('/', async (c) => {
   return c.json(result);
 });
 
-documentsRouter.post('/', async (c) => {
+documentsRouter.post('/', rateLimiter(RATE_LIMITS.UPLOAD_PER_MINUTE), async (c) => {
   const userId = c.get('userId');
   const body = await c.req.parseBody();
 
@@ -127,7 +129,7 @@ documentsRouter.get('/:id/extraction', async (c) => {
   return c.json({ data: extraction });
 });
 
-documentsRouter.post('/:id/analyze', async (c) => {
+documentsRouter.post('/:id/analyze', rateLimiter(RATE_LIMITS.ANALYSIS_PER_MINUTE), async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 
@@ -241,7 +243,7 @@ documentsRouter.put('/:id/review', async (c) => {
 // POST /:id/export — Trigger DOCX generation
 // ============================================================
 
-documentsRouter.post('/:id/export', async (c) => {
+documentsRouter.post('/:id/export', rateLimiter(RATE_LIMITS.EXPORT_PER_MINUTE), async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 

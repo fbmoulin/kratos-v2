@@ -160,6 +160,45 @@ Esta lista de tarefas detalha as ações necessárias para a implementação do 
 
 ---
 
+## Fase 5: Production Hardening (IN PROGRESS — 2026-02-16)
+
+> Plano completo: `docs/plans/2026-02-16-production-hardening.md` (23 tarefas, 5 sprints)
+
+### Sprint 1: Security Hardening
+- [x] Auth bypass guard — bloqueia bypass em production/staging, 5 testes novos
+- [x] CORS + validação de env vars críticas no startup
+- [x] Rate limiter aplicado em upload (10/min), analyze (5/min), export (20/min)
+- [ ] Validação de magic bytes PDF + sanitização de filename
+- [ ] Auditoria de API keys no git history
+
+### Sprint 2: Build & Deploy Pipeline
+- [ ] Build real com tsc (substituir tsx em produção)
+- [ ] SIGTERM graceful shutdown (API + PDF worker)
+- [ ] Pino structured logging (substituir console.*)
+- [ ] Remover fly.toml (artefato stale)
+
+### Sprint 3: Async Analysis Pipeline
+- [ ] Queue de análise (`kratos:jobs:analysis`)
+- [ ] Refatorar POST /analyze para async (202 Accepted)
+- [ ] Criar analysis-worker (novo serviço Railway)
+
+### Sprint 4: API & DB Robustness
+- [ ] Zod validation em query parameters
+- [ ] Formato consistente de erro `{ error: { message } }`
+- [ ] DB connection pool limits (max=5)
+- [ ] parseLlmJson — hardening de JSON.parse para respostas LLM
+- [ ] RAG error logging
+- [ ] Drizzle baseline migration
+- [ ] Redis error recovery + retry strategy
+- [ ] X-Request-ID middleware
+
+### Sprint 5: Frontend Fixes
+- [ ] API base URL via VITE_API_BASE_URL
+- [ ] React Error Boundary
+- [ ] Auth token refresh
+
+---
+
 ## Pós-MVP (Enterprise)
 
 - [ ] Índice HNSW para precedents.embedding (produção).

@@ -39,8 +39,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  * @returns 401 if token is missing, invalid, or expired; 500 on unexpected errors
  */
 export async function authMiddleware(c: Context, next: Next) {
-  // Dev-only auth bypass for E2E testing (requires both env vars)
-  if (process.env.NODE_ENV === 'development' && process.env.TEST_USER_ID) {
+  // Dev-only auth bypass for E2E testing — hard-blocked in production
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'staging' &&
+    process.env.TEST_USER_ID
+  ) {
     c.set('userId', process.env.TEST_USER_ID);
     return next();
   }
