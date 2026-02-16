@@ -12,7 +12,9 @@ Generated: 2026-02-16
 kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 ├── apps/
 │   ├── api/                    # Hono REST API (tsx runtime, port 3001)
-│   │   ├── src/index.ts        # Entry: Hono app, /v2 base, middleware chain
+│   │   ├── src/index.ts        # Entry: Hono app, /v2 base, middleware chain, SIGTERM handler
+│   │   ├── src/types.ts        # AppEnv — typed Hono context (userId, user)
+│   │   ├── src/lib/logger.ts   # Pino structured logging (JSON prod, pretty dev, silent test)
 │   │   ├── src/middleware/      # auth.ts (Supabase JWT), rate-limit.ts
 │   │   ├── src/routes/         # health.ts, documents.ts (CRUD + upload + analyze)
 │   │   └── src/services/       # storage.ts, queue.ts, document-repo.ts
@@ -75,7 +77,10 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 
 ### @kratos/api (apps/api)
 - **Purpose:** REST API — Hono framework, `/v2` base path
-- **Middleware:** logger → secureHeaders → CORS → auth (Supabase JWT on /documents/*)
+- **Middleware:** pino logger → secureHeaders → CORS → auth (Supabase JWT on /documents/*) → rate-limit
+- **Logging:** Pino 9 — JSON in production, pino-pretty in dev, silent in test
+- **Graceful shutdown:** SIGTERM/SIGINT handlers with 10s force-exit timeout
+- **Types:** `AppEnv` — typed Hono context variables (`userId`, `user`)
 - **Routes:**
   - `GET /v2/` — API info (public)
   - `GET /v2/health` — Liveness probe (public)
@@ -89,7 +94,8 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
   - `GET /v2/health/metrics` — Request count, error rate, avg latency
 - **Services:** `storageService` (Supabase Storage), `queueService` (Redis LPUSH), `documentRepo` (Drizzle queries), `analysisService` (LangGraph), `reviewService`
 - **Monitoring:** Sentry (`@sentry/node` via `app.onError`)
-- **Tests:** 24 passing (5 suites)
+- **Build:** `tsc --noEmit` type-check (tsx runtime, no emit)
+- **Tests:** 26 passing (5 suites)
 
 ### @kratos/web (apps/web) — Phase 3 DONE
 - **Purpose:** React 19 frontend — Dashboard, HITL review, document management
@@ -97,7 +103,7 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 - **Pages:** Login (email+password), Dashboard (upload + table + stats), Review (HITL approval/rejection)
 - **Components:** DocumentTable, UploadZone, StatsBar, MinutaEditor, ReviewPanel, Layout, AuthGuard
 - **Hooks:** useDocuments (React Query), useAuth (Supabase), useAnalysis
-- **Tests:** 28 passing (9 suites)
+- **Tests:** 34 passing (9 suites)
 
 ### @kratos/ai (packages/ai) — Phase 2 DONE
 - **Purpose:** LangGraph agent orchestration, RAG engine, prompt management
@@ -144,18 +150,19 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 | Package | Tests | Suites | Framework |
 |---------|-------|--------|-----------|
 | @kratos/ai | 70 | 15 | Vitest 3 |
+| @kratos/web | 34 | 9 | Vitest 3 |
 | @kratos/db | 31 | 8 | Vitest 3 |
-| @kratos/web | 28 | 9 | Vitest 3 |
-| @kratos/api | 24 | 5 | Vitest 3 |
+| @kratos/api | 26 | 5 | Vitest 3 |
 | @kratos/core | 18 | 2 | Vitest 3 |
 | pdf-worker | — | 5 | pytest |
-| **Total** | **171+** | **44** | Coverage: Vitest v8 with thresholds |
+| **Total** | **179+** | **44** | Coverage: Vitest v8 with thresholds |
 
 ## Key Dependencies
 
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
 | hono | ^4.7 | API framework (ultrafast, Edge-compatible) |
+| pino | ^9.6 | Structured JSON logging |
 | drizzle-orm | ^0.39 | Type-safe PostgreSQL ORM |
 | postgres | ^3.4 | PostgreSQL driver (postgres.js) |
 | @supabase/supabase-js | ^2.49 | Auth, Storage, DB client |
@@ -213,4 +220,5 @@ pnpm test
 | Phase 2 | ✅ Done | LangGraph agents, FIRAC+ analysis, RAG engine, model routing, 70 tests |
 | Phase 2.5 | ✅ Done | DB applied (8 tables + pgvector), 100 STJ precedents seeded, E2E scripts |
 | Phase 3 | ✅ Done | Frontend (React 19 + shadcn/ui), Login/Dashboard/Review, HITL UI, 28 web tests |
-| Phase 4 | ✅ Done | 171 tests, Sentry, coverage, CD workflows, Railway deploy (LIVE) |
+| Phase 4 | ✅ Done | 179 tests, Sentry, coverage, CD workflows, Railway deploy (LIVE) |
+| Hardening | 🔄 In Progress | Sprints 1-2 done (security, build/deploy), Sprints 3-5 pending |

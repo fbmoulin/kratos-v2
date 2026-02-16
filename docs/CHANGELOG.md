@@ -7,9 +7,35 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
-## [Unreleased]
+## [Unreleased] — Production Hardening
 
-_Nada ainda._
+### Adicionado
+- **SIGTERM graceful shutdown**: API captures `serve()` handle, adds SIGTERM/SIGINT handlers with 10s force-exit timeout
+- **Pino structured logging**: `apps/api/src/lib/logger.ts` — JSON in production, pino-pretty in dev, silent in test
+- **AppEnv Hono types**: `apps/api/src/types.ts` — typed context variables (`userId`, `user`) for all routers
+- **PDF magic bytes validation**: Rejects files with spoofed MIME types (`%PDF` header check)
+- **Filename sanitization**: Strips path traversal chars, limits length to 200
+- **STOPSIGNAL SIGTERM** in Dockerfile for Railway deploy compatibility
+- **docker-compose.test.yml**: CI test infrastructure (Postgres 16, Redis 7, API, worker)
+- **DocumentDetail.test.tsx**: 6 new tests for the document detail page
+
+### Modificado
+- **API build script**: Real `tsc --noEmit` type-check (was fake `tsx --version` stub)
+- **API tsconfig**: `noEmit: true`, removed `rootDir` for monorepo compatibility
+- **CI workflows**: `ci.yml`, `deploy-production.yml` now test all 5 TS packages (web+db were skipped)
+- **integration.yml**: Explicit `--filter` per TS package (was running Python tests in Node CI)
+- **Hono logger renamed**: `import { logger as honoLogger }` to avoid conflict with pino
+
+### Segurança
+- **Auth bypass guard**: Production + staging environments block dev-only auth bypass
+- **CORS + env validation**: Startup crashes fast if SUPABASE_URL/KEY missing
+- **Rate limiter wired**: upload (10/min), analyze (5/min), export (20/min)
+- **Leaked key removed**: `smoke_test.py` hardcoded Supabase service role key replaced with required env var
+- ⚠️ **KEY ROTATION NEEDED**: `sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz` still in git history
+
+### Removido
+- **fly.toml**: Stale Fly.io config (project uses Railway)
+- **.env.example**: Removed `FLY_API_TOKEN`, added `RAILWAY_TOKEN` + `RAILWAY_PRODUCTION_TOKEN`
 
 ---
 

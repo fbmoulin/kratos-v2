@@ -54,7 +54,7 @@ O sistema é projetado para ser escalável, seguro e eficiente, utilizando as te
 | **Processamento de PDF** | Docling, pdfplumber, Gemini 2.5 Flash | Pipeline híbrido para extração de dados de PDFs. |
 | **Fila de Jobs** | Celery (Python) com Redis | Processamento assíncrono e pesado de documentos. |
 | **Autenticação** | Supabase Auth | Gerenciamento de usuários e segurança. |
-| **Deploy** | Vercel (Frontend), Fly.io/Railway (Backend) | Plataformas de deploy modernas, escaláveis e com excelente DX. |
+| **Deploy** | Vercel (Frontend), Railway (Backend) | Plataformas de deploy modernas, escaláveis e com excelente DX. |
 | **CI/CD** | GitHub Actions | Automação de testes e deploys. |
 | **Monorepo** | pnpm workspaces, Turborepo | Gerenciamento eficiente de pacotes e builds. |
 
@@ -148,11 +148,12 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 | **Fase 2** | ✅ Concluída | LangGraph pipeline (supervisor → router → RAG → FIRAC+ → drafter), model-router, 70 testes AI |
 | **Fase 2.5** | ✅ Concluída | DB schema aplicado (8 tabelas + pgvector), 100 precedentes STJ seedados, scripts E2E |
 | **Fase 3** | ✅ Concluída | Frontend (React 19 + Vite 6 + Tailwind 4 + shadcn/ui), Dashboard, HITL review UI, 28 testes web |
-| **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Fly.io), 171+ testes |
+| **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Railway), 179 testes |
+| **Hardening** | 🔄 Em progresso | Sprints 1-2 completos (segurança, build/deploy), Sprints 3-5 pendentes |
 
 ### Métricas Atuais
-- **171+ testes** passando (70 AI + 24 API + 28 Web + 18 Core + 31 DB)
-- **32 test files** across 5 packages
+- **179 testes** passando (70 AI + 26 API + 34 Web + 18 Core + 31 DB)
+- **10 test suites** across 5 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d
 - **4 CI/CD workflows** (CI, deploy-staging, deploy-production, integration)
