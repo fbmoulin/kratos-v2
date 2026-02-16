@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsx --version && echo 'API build OK - uses tsx runtime'",
+    "build": "tsc -p tsconfig.json",
     "start": "tsx src/index.ts",
     "lint": "eslint src/",
     "test": "vitest run",

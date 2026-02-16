@@ -23,7 +23,7 @@ COPY packages/core/ packages/core/
 COPY packages/db/ packages/db/
 COPY packages/ai/ packages/ai/
 
-# Build workspace packages (core, db, ai need tsc compilation)
+# Build workspace packages (core, db, ai compile to dist/; api type-checks only)
 RUN pnpm build
 
 # ─── Stage 3: Production image ───────────────────────────────────
@@ -43,5 +43,8 @@ EXPOSE 3001
 # Health check against the API
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://localhost:3001/v2/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+
+# Graceful shutdown: API handles SIGTERM via process.on('SIGTERM')
+STOPSIGNAL SIGTERM
 
 CMD ["pnpm", "--filter", "@kratos/api", "start"]

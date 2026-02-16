@@ -25,21 +25,23 @@
  */
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import type { AppEnv } from './types.js';
 import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
+import { logger as honoLogger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { APP_NAME, APP_VERSION } from '@kratos/core';
 import { healthRouter } from './routes/health.js';
 import { documentsRouter } from './routes/documents.js';
 import { authMiddleware } from './middleware/auth.js';
 import { initSentry, captureError } from './middleware/sentry.js';
+import { logger } from './lib/logger.js';
 
 initSentry();
 
-const app = new Hono().basePath('/v2');
+const app = new Hono<AppEnv>().basePath('/v2');
 
 // Global middleware — applied to all routes
-app.use('*', logger());
+app.use('*', honoLogger());
 app.use('*', secureHeaders());
 app.use(
   '*',
@@ -71,7 +73,7 @@ app.get('/', (c) => {
 // Global error handler — captures to Sentry and returns a generic 500
 app.onError((err, c) => {
   captureError(err, { path: c.req.path, method: c.req.method });
-  console.error(`[ERROR] ${c.req.method} ${c.req.path}:`, err.message);
+  logger.error({ err, method: c.req.method, path: c.req.path }, 'Unhandled error');
   return c.json({ error: 'Internal server error' }, 500);
 });
 
@@ -79,15 +81,31 @@ app.onError((err, c) => {
 const port = parseInt(process.env.PORT || '3001', 10);
 
 if (process.env.NODE_ENV !== 'test') {
-  serve(
+  const server = serve(
     {
       fetch: app.fetch,
       port,
     },
     (info) => {
-      console.log(`🚀 ${APP_NAME} API running on http://localhost:${info.port}/v2`);
+      logger.info({ port: info.port }, `${APP_NAME} API running on http://localhost:${info.port}/v2`);
     },
   );
+
+  const shutdown = () => {
+    logger.info('Graceful shutdown initiated...');
+    server.close(() => {
+      logger.info('Server closed. Exiting.');
+      process.exit(0);
+    });
+    // Force exit after 10s if connections hang
+    setTimeout(() => {
+      logger.error('Forced exit after timeout');
+      process.exit(1);
+    }, 10_000).unref();
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 export default app;

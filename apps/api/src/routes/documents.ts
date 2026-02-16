@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { AppEnv } from '../types.js';
 import { z } from 'zod';
 import { storageService } from '../services/storage.js';
 import { queueService } from '../services/queue.js';
@@ -13,7 +14,7 @@ const reviewSchema = z.object({
   revisedContent: z.record(z.unknown()).optional(),
 });
 
-export const documentsRouter = new Hono();
+export const documentsRouter = new Hono<AppEnv>();
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46]; // %PDF
@@ -163,7 +164,7 @@ documentsRouter.post('/:id/analyze', async (c) => {
   const analysis = await analysisRepo.create({
     extractionId: extraction.id,
     agentChain: 'supervisor→router→rag→specialist',
-    reasoningTrace: finalState.routerResult?.reasoning ?? null,
+    reasoningTrace: finalState.routerResult?.reasoning ?? undefined,
     resultJson: {
       firacResult: finalState.firacResult,
       draftResult: finalState.draftResult,
