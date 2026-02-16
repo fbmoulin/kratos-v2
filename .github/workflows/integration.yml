@@ -63,7 +63,7 @@ jobs:
             sleep 2
           done
 
-      - name: Run integration tests
+      - name: Run integration tests (TypeScript packages only)
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:55432/kratos_test
@@ -71,8 +71,11 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          # Run tests (consider using TEST_INTEGRATION=1 to gate longer tests)
-          pnpm test
+          pnpm --filter @kratos/core test
+          pnpm --filter @kratos/db test
+          pnpm --filter @kratos/ai test
+          pnpm --filter @kratos/api test
+          pnpm --filter @kratos/web test
 
       - name: Tear down infra
         if: always()

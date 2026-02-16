@@ -25,11 +25,13 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test (core + ai + api)
+      - name: Test (all TypeScript packages)
         run: |
           pnpm --filter @kratos/core test
+          pnpm --filter @kratos/db test
           pnpm --filter @kratos/ai test
           pnpm --filter @kratos/api test
+          pnpm --filter @kratos/web test
         env:
           NODE_ENV: test
 
