@@ -226,7 +226,7 @@ Uses RATE_LIMITS from @kratos/core: upload 10/min, analyze 5/min, export 20/min.
 
 ---
 
-### Task 4: PDF Magic Bytes Validation + Path Sanitization
+### Task 4: PDF Magic Bytes Validation + Path Sanitization ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/routes/documents.ts:30-55`
@@ -295,7 +295,7 @@ Sanitizes file.name to prevent path traversal in storage paths."
 
 ---
 
-### Task 5: Audit Git History for API Key Leaks
+### Task 5: Audit Git History for API Key Leaks ✅ DONE
 
 **Step 1: Search git history**
 
@@ -328,7 +328,7 @@ git commit --allow-empty -m "security: audit complete — API keys rotated if ne
 
 ## Sprint 2: Build & Deploy Pipeline
 
-### Task 6: Real TypeScript Build for API
+### Task 6: Real TypeScript Build for API ✅ DONE
 
 **Files:**
 - Modify: `apps/api/package.json` (scripts.build, scripts.start)

@@ -168,11 +168,11 @@ Esta lista de tarefas detalha as ações necessárias para a implementação do 
 - [x] Auth bypass guard — bloqueia bypass em production/staging, 5 testes novos
 - [x] CORS + validação de env vars críticas no startup
 - [x] Rate limiter aplicado em upload (10/min), analyze (5/min), export (20/min)
-- [ ] Validação de magic bytes PDF + sanitização de filename
-- [ ] Auditoria de API keys no git history
+- [x] Validação de magic bytes PDF + sanitização de filename
+- [x] Auditoria de API keys no git history (limpo, sem leaks)
 
 ### Sprint 2: Build & Deploy Pipeline
-- [ ] Build real com tsc (substituir tsx em produção)
+- [x] Build real com tsc (substituir tsx em produção)
 - [ ] SIGTERM graceful shutdown (API + PDF worker)
 - [ ] Pino structured logging (substituir console.*)
 - [ ] Remover fly.toml (artefato stale)
