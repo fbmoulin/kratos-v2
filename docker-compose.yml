@@ -8,7 +8,7 @@ version: '3.9'
 # ============================================================
 
 services:
-  # Redis - Message Broker para Celery + Cache
+  # Redis - Message broker + cache
   redis:
     image: redis:7-alpine
     container_name: kratos-redis
@@ -38,7 +38,7 @@ services:
     profiles:
       - debug
 
-  # PDF Worker (Python/Celery) — opt-in via: docker compose --profile worker up
+  # PDF Worker (Python) — opt-in via: docker compose --profile worker up
   pdf-worker:
     build:
       context: ./workers/pdf-worker
@@ -46,8 +46,6 @@ services:
     container_name: kratos-pdf-worker
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - DATABASE_URL=${DATABASE_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
