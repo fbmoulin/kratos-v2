@@ -1,6 +1,6 @@
 {
   "name": "kratos-v2",
-  "version": "2.0.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
   "description": "KRATOS v2 - Knowledge-driven Reasoning and Automated Text Output System",

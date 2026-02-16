@@ -105,14 +105,15 @@ Skill `kratos-v2` criada em `/home/ubuntu/skills/kratos-v2/` com:
 
 ## Projeto Supabase
 
+> **Nota:** O projeto Supabase foi migrado após a Fase 0. O projeto atual é `jzgdorcvfxlahffqnyor` (stj-rag). Veja `docs/SUPABASE_INFO.md` para detalhes atualizados.
+
 | Campo | Valor |
 |-------|-------|
-| **Nome** | KRATOS v2 |
-| **ID** | qxttfjlgqkfurxxrorfn |
+| **Nome** | stj-rag (KRATOS v2) |
+| **ID** | `jzgdorcvfxlahffqnyor` |
 | **Região** | sa-east-1 (São Paulo) |
 | **Status** | ACTIVE_HEALTHY |
-| **PostgreSQL** | 17.6.1 |
-| **URL** | https://qxttfjlgqkfurxxrorfn.supabase.co |
+| **URL** | https://jzgdorcvfxlahffqnyor.supabase.co |
 
 ---
 

@@ -1,8 +1,8 @@
 # KRATOS v2 — API Reference
 
-**Base URL:** `http://localhost:3001/v2` (dev) | `https://api.kratos.leg.br/v2` (production)
-**Version:** 2.1.0
-**Last updated:** 2026-02-14
+**Base URL:** `http://localhost:3001/v2` (dev) | `https://api-production-8225.up.railway.app/v2` (production)
+**Version:** 2.4.0
+**Last updated:** 2026-02-16
 
 ---
 

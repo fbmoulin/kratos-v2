@@ -1,8 +1,8 @@
 _# Guia de Contribuição para o KRATOS v2
 
 **Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
-**Data**: 14 de Fevereiro de 2026
-**Versão**: 1.0
+**Data**: 16 de Fevereiro de 2026
+**Versão**: 2.4
 
 ---
 

@@ -1,68 +1,126 @@
 # Guia de Deploy — KRATOS v2
 
-**Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
-**Data**: 15 de Fevereiro de 2026
-**Versão**: 2.0
+**Data**: 16 de Fevereiro de 2026
+**Versão**: 2.4
 
 ---
 
 ## 1. Visão Geral da Estratégia de Deploy
 
-O deploy do **KRATOS v2** é projetado para ser um processo automatizado, seguro e com zero downtime, utilizando plataformas de nuvem modernas (PaaS) e um pipeline de CI/CD robusto. A estratégia de deploy varia ligeiramente para cada componente do monorepo (frontend, backend, workers) para otimizar a performance, o custo e a experiência do desenvolvedor.
+O deploy do **KRATOS v2** é automatizado via GitHub Actions e utiliza plataformas PaaS modernas. A API e workers rodam no **Railway**, o frontend na **Vercel**, e o banco de dados no **Supabase** (externo).
 
 ## 2. Plataformas de Deploy
 
--   **Frontend (`apps/web`)**: O deploy será feito na **Vercel**. A Vercel oferece uma integração perfeita com o Next.js (ou Vite/React), deploys atômicos, caching de CDN global e previews de deploy automáticos para cada pull request.
+| Componente | Plataforma | URL / Config |
+|:---|:---|:---|
+| **Frontend** (`apps/web`) | **Vercel** | CDN global, preview deploys por PR, SPA rewrites |
+| **Backend** (`apps/api`) | **Railway** | `https://api-production-8225.up.railway.app` |
+| **PDF Worker** (`workers/pdf-worker`) | **Railway** | Background worker (sem HTTP), root dir `workers/pdf-worker` |
+| **Redis** | **Railway** (managed plugin) | Private networking (`redis.railway.internal:6379`) |
+| **Database** | **Supabase** (externo) | Projeto `jzgdorcvfxlahffqnyor`, região sa-east-1 |
 
--   **Backend (`apps/api`)**: O deploy será feito no **Fly.io** ou **Railway**. Ambas as plataformas são excelentes para deploy de aplicações conteinerizadas, oferecendo escalabilidade automática, bancos de dados gerenciados e uma CLI poderosa.
+### Railway Project
+- **URL:** https://railway.com/project/5d0fa1b8-0a31-4451-9319-f04a43d94dc5
+- **Auto-deploy:** GitHub integration on push to `main`
+- **Redis:** Private networking (IPv6) — ioredis needs `family: 0` for dual-stack
 
--   **Workers (`workers/pdf-worker`)**: Os workers Celery também serão deployados no **Fly.io** ou **Railway**, como processos separados da API, permitindo que sejam escalados de forma independente com base na carga da fila de tarefas.
+### Configuração por Serviço
+
+| Serviço | Root Dir | Dockerfile | Healthcheck |
+|:---|:---|:---|:---|
+| API | `/` (monorepo root) | `apps/api/Dockerfile` | `/v2/health` |
+| PDF Worker | `workers/pdf-worker` | `workers/pdf-worker/Dockerfile` | Nenhum (background worker) |
+
+**Importante:** NÃO usar `railway.toml` na raiz do monorepo — ele se aplica a TODOS os serviços. Configurar cada serviço via dashboard ou `workers/pdf-worker/railway.toml`.
 
 ## 3. Pipeline de CI/CD com GitHub Actions
 
-O coração da nossa estratégia de deploy é o pipeline de CI/CD automatizado com **GitHub Actions**. O pipeline é dividido em três workflows principais:
-
 ### Workflow 1: `ci.yml` (Integração Contínua)
 
--   **Gatilho**: A cada `push` em um pull request aberto para a branch `main`, e a cada `push` direto na `main`.
+-   **Gatilho**: Push/PR para `main` ou `develop`
 -   **Ações**:
-    1.  **Checkout do Código**: Clona o repositório.
-    2.  **Setup do Ambiente**: Instala Node.js 22, pnpm (via `packageManager` em `package.json`).
-    3.  **Instalação de Dependências**: Executa `pnpm install --frozen-lockfile`.
-    4.  **Build**: Executa `pnpm build` usando o Turborepo.
-    5.  **Lint**: Executa `pnpm lint` (ESLint flat config + TypeScript parser).
-    6.  **Testes com Cobertura**: Executa `pnpm test:coverage` (Vitest v8 coverage, 171+ testes).
-    7.  **Upload de Artefatos**: Faz upload dos relatórios `lcov.info` de cobertura.
+    1.  Setup: Node.js 22, pnpm, `--frozen-lockfile`
+    2.  Build: `pnpm build` (Turborepo)
+    3.  Lint: `pnpm lint` (ESLint flat config)
+    4.  Testes com Cobertura: `pnpm test:coverage` (Vitest v8, 171+ testes)
+    5.  Upload de Artefatos: `lcov.info` + `coverage-summary.json`
 
 ### Workflow 2: `deploy-staging.yml` (Deploy para Staging)
 
--   **Gatilho**: A cada `push` para a branch `main`.
--   **Secrets necessários**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `FLY_API_TOKEN`, `STAGING_API_URL`
+-   **Gatilho**: Push para `main`
+-   **Secrets necessários**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `STAGING_API_URL`, `VITE_*`
 -   **Ações**:
-    1.  **Build e Testes**: Instala dependências, builda e roda testes.
-    2.  **Deploy do Frontend (Vercel)**: Instala Vercel CLI, faz pull do projeto, build com `VITE_API_BASE_URL` e deploy.
-    3.  **Deploy do Backend (Fly.io)**: Instala flyctl e executa `fly deploy` usando `fly.toml` (região `gru`, health check em `/v2/health`).
+    1.  **Deploy do Frontend (Vercel)**: `vercel-action@v25` com env vars de build
+    2.  **Deploy do Backend (Railway)**: Auto-deploy via GitHub integration (não precisa de workflow step — Railway detecta push automaticamente)
 
 ### Workflow 3: `deploy-production.yml` (Deploy para Produção)
 
--   **Gatilho**: Criação de `tag` no formato `v*` (ex: `v2.0.0`).
--   **Secrets necessários**: mesmos do staging + `PRODUCTION_API_URL`
+-   **Gatilho**: Tag `v*` (ex: `v2.4.0`)
 -   **Ações**:
-    1.  **Testes pré-deploy**: Job `test` roda antes de qualquer deploy.
-    2.  **Aprovação Manual**: Usa `environment: production` do GitHub, que exige aprovação de um maintainer.
-    3.  **Deploy do Frontend (Vercel)**: Deploy com `--prod` flag.
-    4.  **Deploy do Backend (Fly.io)**: Deploy com `fly deploy`.
+    1.  **Testes pré-deploy**: Job `test` roda antes de qualquer deploy
+    2.  **Aprovação Manual**: `environment: production` do GitHub exige aprovação
+    3.  **Deploy do Frontend (Vercel)**: Deploy com `--prod` flag
+    4.  **Deploy do Backend (Railway)**: Via Railway API ou manual promote
+
+### Workflow 4: `integration.yml` (Testes de Integração)
+
+-   **Gatilho**: Nightly (cron) ou manual (`workflow_dispatch`)
+-   **Ações**: Docker Compose (Postgres + Redis) → DB push → API + Worker → Full test suite
 
 ## 4. Rollbacks
 
--   **Vercel**: A Vercel mantém um histórico de todos os deploys. Em caso de falha, é possível reverter para um deploy anterior com um único clique no dashboard da Vercel.
--   **Fly.io**: O Fly.io também permite reverter para uma versão anterior da aplicação facilmente através da sua CLI, utilizando o comando `fly deploy --image <imagem_anterior>`.
+-   **Vercel**: Histórico de deploys atômicos — reverter com um clique no dashboard
+-   **Railway**: Dashboard mostra histórico de deploys. Reverter via "Rollback" no deploy anterior, ou `railway redeploy --service api`
 
 ## 5. Monitoramento e Alertas
 
-Após o deploy, o monitoramento contínuo é essencial para garantir a saúde da aplicação.
+-   **Error Tracking (Sentry)**: ✅ Integrado no frontend (`@sentry/react` + ErrorBoundary + session replay) e no backend (`@sentry/node` via `app.onError`). Requer `SENTRY_DSN` (backend) e `VITE_SENTRY_DSN` (frontend).
+-   **Health Checks**: ✅ `/v2/health` (liveness), `/v2/health/ready` (DB + Redis probes, retorna 503 se degradado), `/v2/health/metrics` (request count, error rate, avg latency).
+-   **Logs**: `railway logs --service api` / `railway logs --service pdf-worker`
+-   **Métricas**: Planejado — Prometheus/Grafana para dashboards de performance (Pós-MVP)
 
--   **Error Tracking (Sentry)**: ✅ Integrado no frontend (`@sentry/react` com ErrorBoundary, session replay) e no backend (`@sentry/node` via `app.onError` com contexto de request). Requer `SENTRY_DSN` (backend) e `VITE_SENTRY_DSN` (frontend).
--   **Health Checks**: ✅ Endpoint `/v2/health/ready` verifica DB e Redis com status 200/503. Endpoint `/v2/health/metrics` expõe request count, error rate e avg latency em JSON.
--   **Métricas de Performance**: Planejado: Prometheus para coletar métricas da API e workers, Grafana para dashboards.
--   **Alertas**: Planejado: Configuração de alertas para anomalias (taxa de erros, latência, CPU/memória).
+## 6. Railway CLI (Comandos Úteis)
+
+```bash
+# Login (WSL2: usar --browserless)
+railway login --browserless
+
+# Ver logs
+railway logs --service api
+railway logs --service pdf-worker --build
+
+# Variáveis de ambiente
+railway variables --service api
+railway variables --service api --set "KEY=VALUE"
+
+# Redeploy
+railway redeploy --service api
+```
+
+## 7. Secrets Necessários
+
+### GitHub Secrets (CI/CD)
+| Secret | Uso |
+|:---|:---|
+| `VERCEL_TOKEN` | Deploy frontend |
+| `VERCEL_ORG_ID` | Organização Vercel |
+| `VERCEL_PROJECT_ID` | Projeto Vercel |
+| `STAGING_API_URL` | URL da API staging (build frontend) |
+| `PRODUCTION_API_URL` | URL da API produção (build frontend) |
+| `VITE_SUPABASE_URL` | Supabase URL (build frontend) |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key (build frontend) |
+| `VITE_SENTRY_DSN` | Sentry DSN frontend (build frontend) |
+
+### Railway Environment Variables
+| Variável | Serviço | Valor |
+|:---|:---|:---|
+| `SUPABASE_URL` | api, pdf-worker | `https://jzgdorcvfxlahffqnyor.supabase.co` |
+| `SUPABASE_KEY` | api | Anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | api, pdf-worker | Service role key |
+| `REDIS_URL` | api, pdf-worker | `${{Redis.REDIS_URL}}` (ref var) |
+| `ANTHROPIC_API_KEY` | api | Claude API key |
+| `GEMINI_API_KEY` | api | Google AI key |
+| `OPENAI_API_KEY` | api | OpenAI key (embeddings) |
+| `SENTRY_DSN` | api | Sentry DSN backend |
+| `NODE_ENV` | api | `production` |
+| `PORT` | api | `3001` |

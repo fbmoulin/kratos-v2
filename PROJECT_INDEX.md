@@ -1,6 +1,6 @@
 # Project Index: KRATOS v2
 
-Generated: 2026-02-15
+Generated: 2026-02-16
 
 ## Overview
 
@@ -16,8 +16,8 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 │   │   ├── src/middleware/      # auth.ts (Supabase JWT), rate-limit.ts
 │   │   ├── src/routes/         # health.ts, documents.ts (CRUD + upload + analyze)
 │   │   └── src/services/       # storage.ts, queue.ts, document-repo.ts
-│   └── web/                    # React 19 + Vite + Tailwind 4 (port 5173)
-│       └── src/                # App.tsx, main.tsx (scaffold)
+│   └── web/                    # React 19 + Vite 6 + Tailwind 4 + shadcn/ui (port 5173)
+│       └── src/                # Pages (Login, Dashboard, Review), components, hooks
 ├── packages/
 │   ├── core/                   # Shared types, enums, constants (zero deps)
 │   │   └── src/index.ts        # DocumentStatus, UserRole, LegalMatter, FIRACResult, etc.
@@ -40,7 +40,7 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 │       ├── src/models/extraction.py  # Pydantic: ExtractionResult, TableData, ImageData
 │       └── tests/               # 5 test files (pytest)
 ├── scripts/                    # seed-precedents.ts, test-e2e-full.ts, test-e2e-pipeline.ts, init_project.sh
-├── docs/                       # 16 markdown docs (architecture, API, roadmap, etc.)
+├── docs/                       # 20 markdown docs (architecture, API, roadmap, deploy, etc.)
 ├── docker-compose.yml          # Redis 7 + Redis Commander (dev) + pdf-worker (profiles: [worker])
 └── docker-compose.test.yml     # CI test infrastructure
 ```
@@ -84,12 +84,20 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
   - `POST /v2/documents` — Upload PDF (50MB limit, multipart)
   - `GET /v2/documents/:id` — Get document
   - `GET /v2/documents/:id/extraction` — Get extraction result
-  - `POST /v2/documents/:id/analyze` — Queue analysis (Phase 2 scaffold)
-- **Services:** `storageService` (Supabase Storage), `queueService` (Redis LPUSH), `documentRepo` (Drizzle queries)
+  - `POST /v2/documents/:id/analyze` — Trigger AI analysis (LangGraph pipeline)
+  - `POST /v2/documents/:id/review` — HITL approve/reject
+  - `GET /v2/health/metrics` — Request count, error rate, avg latency
+- **Services:** `storageService` (Supabase Storage), `queueService` (Redis LPUSH), `documentRepo` (Drizzle queries), `analysisService` (LangGraph), `reviewService`
+- **Monitoring:** Sentry (`@sentry/node` via `app.onError`)
+- **Tests:** 24 passing (5 suites)
 
-### @kratos/web (apps/web)
-- **Purpose:** React 19 frontend — HITL review interface (scaffold)
-- **Stack:** Vite 6 + Tailwind CSS 4 + Supabase Auth
+### @kratos/web (apps/web) — Phase 3 DONE
+- **Purpose:** React 19 frontend — Dashboard, HITL review, document management
+- **Stack:** Vite 6 + Tailwind CSS 4 + shadcn/ui + Supabase Auth + React Router v7
+- **Pages:** Login (email+password), Dashboard (upload + table + stats), Review (HITL approval/rejection)
+- **Components:** DocumentTable, UploadZone, StatsBar, MinutaEditor, ReviewPanel, Layout, AuthGuard
+- **Hooks:** useDocuments (React Query), useAuth (Supabase), useAnalysis
+- **Tests:** 28 passing (9 suites)
 
 ### @kratos/ai (packages/ai) — Phase 2 DONE
 - **Purpose:** LangGraph agent orchestration, RAG engine, prompt management
@@ -136,10 +144,12 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 | Package | Tests | Suites | Framework |
 |---------|-------|--------|-----------|
 | @kratos/ai | 70 | 15 | Vitest 3 |
-| @kratos/api | 9 | 2 | Vitest 3 |
-| @kratos/core | 9 | 1 | Vitest 3 |
+| @kratos/db | 31 | 8 | Vitest 3 |
+| @kratos/web | 28 | 9 | Vitest 3 |
+| @kratos/api | 24 | 5 | Vitest 3 |
+| @kratos/core | 18 | 2 | Vitest 3 |
 | pdf-worker | — | 5 | pytest |
-| **Total** | **88+** | **23** | |
+| **Total** | **171+** | **44** | Coverage: Vitest v8 with thresholds |
 
 ## Key Dependencies
 
@@ -161,9 +171,14 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 ## Git Info
 
 - **Branch:** `main` (active)
-- **Other branches:** `feat/integration-ci`
 - **GitHub:** `fbmoulin/kratos-v2`
-- **CI:** GitHub Actions (ci.yml + integration.yml)
+- **CI/CD:** GitHub Actions — 4 workflows:
+  - `ci.yml` — lint, build, test:coverage on push/PR
+  - `deploy-staging.yml` — Vercel + Railway auto-deploy on push to main
+  - `deploy-production.yml` — Vercel + Railway on tag `v*` (manual approval)
+  - `integration.yml` — nightly docker-compose integration tests
+- **Deploy:** Railway (API + pdf-worker + Redis) + Vercel (web)
+- **API URL:** `https://api-production-8225.up.railway.app`
 
 ## Quick Start
 
@@ -193,9 +208,9 @@ pnpm test
 
 | Phase | Status | Scope |
 |-------|--------|-------|
-| Phase 0 | Done | Monorepo setup, CI, DB schema, Drizzle |
-| Phase 1 | Done | API (Hono), Auth, Documents CRUD, PDF worker scaffold, Storage |
-| Phase 2 | Done | LangGraph agents, FIRAC+ analysis, RAG engine, model routing, 70 tests |
-| Phase 2.5 | Done | DB applied (8 tables + pgvector), 100 STJ precedents seeded, E2E scripts |
-| Phase 3 | Next | Frontend (React 19), HITL UI, PDF extraction completion |
-| Phase 4 | Future | Integration tests, monitoring, production deploy |
+| Phase 0 | ✅ Done | Monorepo setup, CI, DB schema, Drizzle, security hardening |
+| Phase 1 | ✅ Done | API (Hono), Auth, Documents CRUD, PDF worker scaffold, Storage |
+| Phase 2 | ✅ Done | LangGraph agents, FIRAC+ analysis, RAG engine, model routing, 70 tests |
+| Phase 2.5 | ✅ Done | DB applied (8 tables + pgvector), 100 STJ precedents seeded, E2E scripts |
+| Phase 3 | ✅ Done | Frontend (React 19 + shadcn/ui), Login/Dashboard/Review, HITL UI, 28 web tests |
+| Phase 4 | ✅ Done | 171 tests, Sentry, coverage, CD workflows, Railway deploy (LIVE) |

@@ -1,0 +1,78 @@
+# ============================================================
+# KRATOS v2 - Docker Compose (CI / Integration Tests)
+# ============================================================
+# Used by .github/workflows/integration.yml for nightly E2E tests.
+# Ports are offset to avoid conflicts with local dev services.
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kratos-test-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kratos_test
+    ports:
+      - '55432:5432'
+    volumes:
+      - pgdata-test:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d kratos_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: kratos-test-redis
+    ports:
+      - '63790:6379'
+    command: redis-server --appendonly no --save ""
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: kratos-test-api
+    environment:
+      NODE_ENV: test
+      PORT: 3001
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/kratos_test
+      REDIS_URL: redis://redis:6379
+      SUPABASE_URL: ${SUPABASE_URL:-http://localhost:54321}
+      SUPABASE_KEY: ${SUPABASE_KEY:-test-key}
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./workers/pdf-worker
+      dockerfile: Dockerfile
+    container_name: kratos-test-worker
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/kratos_test
+      SUPABASE_URL: ${SUPABASE_URL:-http://localhost:54321}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-test-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata-test:
+    driver: local
