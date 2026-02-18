@@ -1,4 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
+import { APP_VERSION } from '@kratos/core';
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
@@ -44,7 +45,7 @@ describe('Health routes', () => {
     const body = await res.json();
     expect(body).toHaveProperty('status', 'healthy');
     expect(body).toHaveProperty('service', 'KRATOS v2');
-    expect(body).toHaveProperty('version', '2.0.0');
+    expect(body).toHaveProperty('version', APP_VERSION);
     expect(body).toHaveProperty('uptime');
     expect(body).toHaveProperty('timestamp');
   });
@@ -57,7 +58,7 @@ describe('Health routes', () => {
     expect(body).toHaveProperty('checks');
     expect(body.checks).toHaveProperty('database');
     expect(body.checks).toHaveProperty('redis');
-    expect(body).toHaveProperty('version', '2.0.0');
+    expect(body).toHaveProperty('version', APP_VERSION);
     expect(body).toHaveProperty('uptime');
   });
 
@@ -80,7 +81,7 @@ describe('Health routes', () => {
 
     const body = await res.json();
     expect(body).toHaveProperty('name', 'KRATOS v2');
-    expect(body).toHaveProperty('version', '2.0.0');
+    expect(body).toHaveProperty('version', APP_VERSION);
     expect(body).toHaveProperty('status', 'operational');
     expect(body).toHaveProperty('timestamp');
   });
