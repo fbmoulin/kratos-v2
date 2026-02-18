@@ -172,13 +172,15 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 20+)
 
 | Package | Tests | Suites | Framework |
 |---------|-------|--------|-----------|
-| @kratos/ai | 70 | 15 | Vitest 3 |
-| @kratos/web | 34 | 9 | Vitest 3 |
-| @kratos/db | 31 | 8 | Vitest 3 |
-| @kratos/api | 26 | 5 | Vitest 3 |
+| @kratos/ai | 75 | 16 | Vitest 3 |
+| @kratos/api | 38 | 7 | Vitest 3 |
+| @kratos/web | 34 | 10 | Vitest 3 |
+| @kratos/db | 31 | 1 | Vitest 3 |
 | @kratos/core | 18 | 2 | Vitest 3 |
-| pdf-worker | — | 5 | pytest |
-| **Total** | **179+** | **44** | Coverage: Vitest v8 with thresholds |
+| analysis-worker | 3 | 1 | Vitest 3 |
+| docx-worker | 2 | 1 | Vitest 3 |
+| pdf-worker | ~24 | 5 | pytest |
+| **Total** | **225+** | **43** | Coverage: Vitest v8 with thresholds |
 
 ## Key Dependencies
 
@@ -244,4 +246,5 @@ pnpm test
 | Phase 2.5 | ✅ Done | DB applied (8 tables + pgvector), 100 STJ precedents seeded, E2E scripts |
 | Phase 3 | ✅ Done | Frontend (React 19 + shadcn/ui), Login/Dashboard/Review, HITL UI, 28 web tests |
 | Phase 4 | ✅ Done | 179 tests, Sentry, coverage, CD workflows, Railway deploy (LIVE) |
-| Hardening | 🔄 In Progress | Sprints 1-2 done (security, build/deploy), Sprints 3-5 pending |
+| Hardening | ✅ Done | 23 tasks (5 sprints): security, build/deploy, async pipeline, API robustness, frontend |
+| v2.6.0 | ✅ Done | DOCX Worker, export pipeline, document detail, quality fixes, CD pipeline live |

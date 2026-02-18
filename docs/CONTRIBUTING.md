@@ -2,7 +2,7 @@ _# Guia de Contribuição para o KRATOS v2
 
 **Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
 **Data**: 16 de Fevereiro de 2026
-**Versão**: 2.4
+**Versão**: 2.6.0
 
 ---
 
@@ -99,7 +99,7 @@ git checkout -b fix/descricao-do-bug
 
 ## Testes
 
-O KRATOS v2 possui uma suíte de testes abrangente (171+ testes em 5 packages). Adicione testes para qualquer novo código que você escrever. Os testes são executados com **Vitest** (v8 coverage) para todos os packages TypeScript e com Pytest para os workers Python.
+O KRATOS v2 possui uma suíte de testes abrangente (225+ testes em 8 packages). Adicione testes para qualquer novo código que você escrever. Os testes são executados com **Vitest** (v8 coverage) para todos os packages TypeScript e com Pytest para o pdf-worker Python.
 
 Para executar todos os testes:
 

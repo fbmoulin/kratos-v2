@@ -1,7 +1,7 @@
 # Guia de Deploy — KRATOS v2
 
-**Data**: 16 de Fevereiro de 2026
-**Versão**: 2.4
+**Data**: 18 de Fevereiro de 2026
+**Versão**: 2.6.0
 
 ---
 
@@ -13,9 +13,11 @@ O deploy do **KRATOS v2** é automatizado via GitHub Actions e utiliza plataform
 
 | Componente | Plataforma | URL / Config |
 |:---|:---|:---|
-| **Frontend** (`apps/web`) | **Vercel** | CDN global, preview deploys por PR, SPA rewrites |
+| **Frontend** (`apps/web`) | **Vercel** | `https://kratos-v2-web.vercel.app` — CDN global, SPA rewrites |
 | **Backend** (`apps/api`) | **Railway** | `https://api-production-8225.up.railway.app` |
 | **PDF Worker** (`workers/pdf-worker`) | **Railway** | Background worker (sem HTTP), root dir `workers/pdf-worker` |
+| **Analysis Worker** (`workers/analysis-worker`) | **Railway** | Background worker (LangGraph pipeline), root dir `workers/analysis-worker` |
+| **DOCX Worker** (`workers/docx-worker`) | **Railway** | Background worker (DOCX export), root dir `workers/docx-worker` |
 | **Redis** | **Railway** (managed plugin) | Private networking (`redis.railway.internal:6379`) |
 | **Database** | **Supabase** (externo) | Projeto `jzgdorcvfxlahffqnyor`, região sa-east-1 |
 
@@ -24,14 +26,25 @@ O deploy do **KRATOS v2** é automatizado via GitHub Actions e utiliza plataform
 - **Auto-deploy:** GitHub integration on push to `main`
 - **Redis:** Private networking (IPv6) — ioredis needs `family: 0` for dual-stack
 
-### Configuração por Serviço
+### Vercel Project
+- **Project:** `kratos-v2-web` (ID: `prj_SuyqaTcSgPdYJxmmAw8SHHMtG9LA`)
+- **Team/Org ID:** `team_L8GwhP7nsZinSqA7O4ZvvVoB`
+- **Root Directory:** `apps/web` (configured on Vercel, NOT in workflow)
+- **Framework:** Vite (auto-detected)
+- **Build:** Vercel handles build server-side; do NOT use `working-directory` in GitHub Actions
+
+### Configuração por Serviço (Railway)
 
 | Serviço | Root Dir | Dockerfile | Healthcheck |
 |:---|:---|:---|:---|
-| API | `/` (monorepo root) | `apps/api/Dockerfile` | `/v2/health` |
-| PDF Worker | `workers/pdf-worker` | `workers/pdf-worker/Dockerfile` | Nenhum (background worker) |
+| API (`api`) | `/` (monorepo root) | `apps/api/Dockerfile` | `/v2/health` |
+| PDF Worker (`pdf-worker`) | `workers/pdf-worker` | `workers/pdf-worker/Dockerfile` | Nenhum (background worker) |
+| Analysis Worker | `workers/analysis-worker` | `workers/analysis-worker/Dockerfile` | Nenhum (background worker) |
+| DOCX Worker | `workers/docx-worker` | `workers/docx-worker/Dockerfile` | Nenhum (background worker) |
 
-**Importante:** NÃO usar `railway.toml` na raiz do monorepo — ele se aplica a TODOS os serviços. Configurar cada serviço via dashboard ou `workers/pdf-worker/railway.toml`.
+**Importante:** NÃO usar `railway.toml` na raiz do monorepo — ele se aplica a TODOS os serviços. Configurar cada serviço via dashboard.
+
+**Service names:** Railway services are named `api` and `pdf-worker` (not `kratos-api` or `kratos-pdf-worker`). Use exact names in `railway up --service <name>`.
 
 ## 3. Pipeline de CI/CD com GitHub Actions
 
@@ -42,7 +55,7 @@ O deploy do **KRATOS v2** é automatizado via GitHub Actions e utiliza plataform
     1.  Setup: Node.js 22, pnpm, `--frozen-lockfile`
     2.  Build: `pnpm build` (Turborepo)
     3.  Lint: `pnpm lint` (ESLint flat config)
-    4.  Testes com Cobertura: `pnpm test:coverage` (Vitest v8, 171+ testes)
+    4.  Testes com Cobertura: `pnpm test:coverage` (Vitest v8, 225+ testes)
     5.  Upload de Artefatos: `lcov.info` + `coverage-summary.json`
 
 ### Workflow 2: `deploy-staging.yml` (Deploy para Staging)
@@ -55,12 +68,12 @@ O deploy do **KRATOS v2** é automatizado via GitHub Actions e utiliza plataform
 
 ### Workflow 3: `deploy-production.yml` (Deploy para Produção)
 
--   **Gatilho**: Tag `v*` (ex: `v2.4.0`)
--   **Ações**:
-    1.  **Testes pré-deploy**: Job `test` roda antes de qualquer deploy
-    2.  **Aprovação Manual**: `environment: production` do GitHub exige aprovação
-    3.  **Deploy do Frontend (Vercel)**: Deploy com `--prod` flag
-    4.  **Deploy do Backend (Railway)**: Via Railway API ou manual promote
+-   **Gatilho**: Tag `v*` (ex: `v2.6.0`)
+-   **Ações** (4 jobs em paralelo após testes):
+    1.  **Testes pré-deploy**: Job `test` roda `pnpm build` + todos os packages
+    2.  **Deploy do Frontend (Vercel)**: `amondnet/vercel-action@v25` com `--prod` flag (Vercel builds server-side)
+    3.  **Deploy da API (Railway)**: `railway up --service api --detach` via project token
+    4.  **Deploy do PDF Worker (Railway)**: `railway up --service pdf-worker --detach` via project token
 
 ### Workflow 4: `integration.yml` (Testes de Integração)
 
@@ -102,14 +115,23 @@ railway redeploy --service api
 ### GitHub Secrets (CI/CD)
 | Secret | Uso |
 |:---|:---|
-| `VERCEL_TOKEN` | Deploy frontend |
-| `VERCEL_ORG_ID` | Organização Vercel |
-| `VERCEL_PROJECT_ID` | Projeto Vercel |
-| `STAGING_API_URL` | URL da API staging (build frontend) |
+| `VERCEL_TOKEN` | Deploy frontend (full-access `vcp_` token) |
+| `VERCEL_ORG_ID` | Team/Org Vercel (`team_L8GwhP7nsZinSqA7O4ZvvVoB`) |
+| `VERCEL_PROJECT_ID` | Projeto Vercel (`prj_SuyqaTcSgPdYJxmmAw8SHHMtG9LA`) |
+| `RAILWAY_PRODUCTION_TOKEN` | Project token (scoped to project + production environment) |
 | `PRODUCTION_API_URL` | URL da API produção (build frontend) |
 | `VITE_SUPABASE_URL` | Supabase URL (build frontend) |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon key (build frontend) |
 | `VITE_SENTRY_DSN` | Sentry DSN frontend (build frontend) |
+
+### Vercel Project Environment Variables
+| Variable | Value |
+|:---|:---|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
+| `VITE_API_BASE_URL` | `https://api-production-8225.up.railway.app` |
+
+> **Nota:** Vercel env vars must be set on the Vercel project (API or dashboard), NOT as GitHub Actions `env:` — the runner's env is not forwarded to Vercel's build server.
 
 ### Railway Environment Variables
 | Variável | Serviço | Valor |

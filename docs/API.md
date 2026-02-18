@@ -1,8 +1,8 @@
 # KRATOS v2 — API Reference
 
 **Base URL:** `http://localhost:3001/v2` (dev) | `https://api-production-8225.up.railway.app/v2` (production)
-**Version:** 2.4.0
-**Last updated:** 2026-02-16
+**Version:** 2.6.0
+**Last updated:** 2026-02-18
 
 ---
 
@@ -41,7 +41,7 @@ In-memory sliding-window rate limiter (MVP). Headers included on all rate-limite
 | `X-RateLimit-Remaining` | Requests remaining in current window |
 | `Retry-After` | Seconds until window resets (only on 429) |
 
-> **Note:** Rate limiter is not yet applied to any routes. Available via `rateLimiter(maxRequests, windowMs)` middleware for Phase 2 integration.
+Rate limits are applied to: upload (10/min), analyze (5/min), export (20/min). Constants defined in `@kratos/core`.
 
 ---
 
@@ -57,9 +57,9 @@ Returns API metadata. No authentication required.
 ```json
 {
   "name": "KRATOS v2",
-  "version": "2.0.0",
+  "version": "2.6.0",
   "status": "operational",
-  "timestamp": "2026-02-14T20:00:00.000Z"
+  "timestamp": "2026-02-18T12:00:00.000Z"
 }
 ```
 
@@ -74,10 +74,10 @@ Liveness probe. Returns 200 if the API process is running.
 {
   "status": "healthy",
   "service": "KRATOS v2",
-  "version": "2.0.0",
+  "version": "2.6.0",
   "uptime": 123.456,
-  "timestamp": "2026-02-14T20:00:00.000Z",
-  "environment": "development"
+  "timestamp": "2026-02-18T12:00:00.000Z",
+  "environment": "production"
 }
 ```
 
@@ -99,7 +99,7 @@ Readiness probe. Checks downstream dependency connectivity.
 }
 ```
 
-> **Note:** All checks currently return `"pending"` — actual connectivity checks will be implemented in Phase 2.
+Checks perform real connectivity probes to Database (Drizzle query) and Redis (ping). Returns HTTP 503 with `"degraded"` status if any check fails.
 
 ---
 
@@ -347,7 +347,7 @@ interface Document {
   filePath: string;    // Supabase Storage path
   fileSize: number;    // Bytes
   mimeType: string;    // MIME type (application/pdf)
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'reviewed';
   pages: number | null;
   errorMessage: string | null;
   createdAt: Date;
@@ -391,7 +391,9 @@ Requests pass through middleware in this order:
 1. **Logger** — Logs `<-- METHOD /path` and `--> METHOD /path STATUS Xms`
 2. **Secure Headers** — Sets `X-Content-Type-Options`, `X-Frame-Options`, etc.
 3. **CORS** — Allows origin from `CORS_ORIGIN` env (default: `http://localhost:5173`)
-4. **Auth** _(documents only)_ — Validates Supabase JWT, sets `user`/`userId` on context
+4. **X-Request-ID** — Propagates or generates UUID for log correlation
+5. **Auth** _(documents only)_ — Validates Supabase JWT, sets `user`/`userId` on context
+6. **Rate Limiter** _(upload/analyze/export only)_ — Sliding-window per IP
 
 ---
 

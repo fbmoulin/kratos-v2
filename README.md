@@ -54,7 +54,7 @@ O sistema é projetado para ser escalável, seguro e eficiente, utilizando as te
 | **Processamento de PDF** | Docling, pdfplumber, Gemini 2.5 Flash | Pipeline híbrido para extração de dados de PDFs. |
 | **Fila de Jobs** | ioredis + Redis (BRPOP) | Processamento assíncrono de análises e extração de PDFs. |
 | **Autenticação** | Supabase Auth | Gerenciamento de usuários e segurança. |
-| **Deploy** | Vercel (Frontend), Railway (Backend) | Plataformas de deploy modernas, escaláveis e com excelente DX. |
+| **Deploy** | Vercel (Frontend), Railway (API + Workers + Redis) | Plataformas de deploy modernas, escaláveis e com excelente DX. |
 | **CI/CD** | GitHub Actions | Automação de testes e deploys. |
 | **Monorepo** | pnpm workspaces, Turborepo | Gerenciamento eficiente de pacotes e builds. |
 
@@ -156,7 +156,7 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 
 ### Métricas Atuais
 - **225 testes** passando (75 AI + 38 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 3 Analysis Worker + 2 DOCX Worker)
-- **12 test suites** across 8 packages
+- **38 test suites** across 8 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d
 - **4 CI/CD workflows** (CI, deploy-staging, deploy-production, integration)
