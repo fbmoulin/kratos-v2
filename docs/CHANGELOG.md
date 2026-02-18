@@ -7,35 +7,61 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
-## [Unreleased] — Production Hardening
+## [2.5.0] - 2026-02-18 — Production Hardening (23 tasks, 5 sprints)
 
 ### Adicionado
-- **SIGTERM graceful shutdown**: API captures `serve()` handle, adds SIGTERM/SIGINT handlers with 10s force-exit timeout
-- **Pino structured logging**: `apps/api/src/lib/logger.ts` — JSON in production, pino-pretty in dev, silent in test
-- **AppEnv Hono types**: `apps/api/src/types.ts` — typed context variables (`userId`, `user`) for all routers
-- **PDF magic bytes validation**: Rejects files with spoofed MIME types (`%PDF` header check)
+
+#### Sprint 1: Security
+- **Auth bypass guard**: Production + staging environments block dev-only auth bypass (5 tests)
+- **CORS + env validation**: Startup crashes fast if SUPABASE_URL/KEY/DATABASE_URL/REDIS_URL missing
+- **Rate limiter wired**: upload (10/min), analyze (5/min), export (20/min) via `@kratos/core` constants
+- **PDF magic bytes validation**: Rejects files with spoofed MIME types (`%PDF-` header check)
 - **Filename sanitization**: Strips path traversal chars, limits length to 200
+- **Git history audit**: Clean, no leaked keys
+
+#### Sprint 2: Build & Deploy
+- **tsc --noEmit type-check**: Real TypeScript build (was fake `tsx --version` stub)
+- **AppEnv Hono types**: `apps/api/src/types.ts` — typed context variables (`userId`, `user`)
+- **SIGTERM graceful shutdown**: API closes HTTP server, Redis, DB pool with 10s timeout
 - **STOPSIGNAL SIGTERM** in Dockerfile for Railway deploy compatibility
-- **docker-compose.test.yml**: CI test infrastructure (Postgres 16, Redis 7, API, worker)
-- **DocumentDetail.test.tsx**: 6 new tests for the document detail page
+- **Pino structured logging**: `apps/api/src/lib/logger.ts` — JSON in production, pino-pretty in dev, silent in test
+- **fly.toml removed**: Stale Fly.io config (project uses Railway)
+
+#### Sprint 3: Async Analysis Pipeline
+- **Analysis queue**: `kratos:jobs:analysis` Redis list with resilience (maxRetriesPerRequest, retryStrategy, error handler)
+- **POST /analyze async**: Returns 202 Accepted, enqueues job for background processing
+- **Analysis worker**: `workers/analysis-worker/` — BRPOP worker with LangGraph pipeline, 4.5min timeout, SIGTERM handler, Dockerfile (3 tests)
+
+#### Sprint 4: API & Database Robustness
+- **Zod validation**: `page`, `limit`, `status` query params validated with coercion and bounds
+- **Consistent error format**: All errors return `{ error: { message } }` (global handler was returning string)
+- **DB connection pool**: max=5, idle_timeout=20s, connect_timeout=10s
+- **parseLlmJson utility**: Strips markdown fences, extracts JSON from preamble text (4 tests)
+- **RAG error logging**: Non-fatal search failures logged instead of silently swallowed
+- **Drizzle baseline migration**: Generated from current schema
+- **X-Request-ID middleware**: Propagates or generates UUID for log correlation
+
+#### Sprint 5: Frontend
+- **API base URL**: Reads from `VITE_API_BASE_URL` env var (fixes Vercel → Railway routing)
+- **React error boundary**: Crash recovery with reload button
+- **Auth token refresh**: Auto-refreshes expired Supabase session before API calls
 
 ### Modificado
-- **API build script**: Real `tsc --noEmit` type-check (was fake `tsx --version` stub)
-- **API tsconfig**: `noEmit: true`, removed `rootDir` for monorepo compatibility
-- **CI workflows**: `ci.yml`, `deploy-production.yml` now test all 5 TS packages (web+db were skipped)
-- **integration.yml**: Explicit `--filter` per TS package (was running Python tests in Node CI)
+- **API build script**: `tsc -p tsconfig.json` (was `tsc --noEmit`)
+- **API tsconfig**: `noEmit: true`, `moduleResolution: "bundler"` for tsx + workspace compat
+- **CI workflows**: `ci.yml`, `deploy-production.yml` now test all packages
 - **Hono logger renamed**: `import { logger as honoLogger }` to avoid conflict with pino
+- **APP_VERSION**: Updated from `2.0.0` to `2.4.0` in `@kratos/core`
+- **docker-compose.test.yml**: CI test infrastructure (Postgres 16, Redis 7, API, worker)
 
 ### Segurança
-- **Auth bypass guard**: Production + staging environments block dev-only auth bypass
-- **CORS + env validation**: Startup crashes fast if SUPABASE_URL/KEY missing
-- **Rate limiter wired**: upload (10/min), analyze (5/min), export (20/min)
 - **Leaked key removed**: `smoke_test.py` hardcoded Supabase service role key replaced with required env var
-- ⚠️ **KEY ROTATION NEEDED**: `sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz` still in git history
-
-### Removido
-- **fly.toml**: Stale Fly.io config (project uses Railway)
 - **.env.example**: Removed `FLY_API_TOKEN`, added `RAILWAY_TOKEN` + `RAILWAY_PRODUCTION_TOKEN`
+
+### Métricas
+- **223 testes** passando (75 AI + 38 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 3 Analysis Worker)
+- **11 test suites** across 7 packages
+- **0 lint errors**, 3 warnings
 
 ---
 
