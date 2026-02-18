@@ -6,6 +6,7 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
 
 const QUEUE_KEY = 'kratos:jobs:pdf';
 const DOCX_QUEUE_KEY = 'kratos:jobs:docx';
+const ANALYSIS_QUEUE_KEY = 'kratos:jobs:analysis';
 
 export interface PdfJob {
   documentId: string;
@@ -18,6 +19,13 @@ export interface DocxJob {
   documentId: string;
   userId: string;
   fileName: string;
+}
+
+export interface AnalysisJob {
+  documentId: string;
+  userId: string;
+  extractionId: string;
+  rawText: string;
 }
 
 export const queueService = {
@@ -36,4 +44,14 @@ export const queueService = {
       throw new Error(`DOCX queue enqueue failed: ${(err as Error).message}`);
     }
   },
+
+  async enqueueAnalysis(job: AnalysisJob) {
+    try {
+      await redis.lpush(ANALYSIS_QUEUE_KEY, JSON.stringify(job));
+    } catch (err) {
+      throw new Error(`Analysis queue enqueue failed: ${(err as Error).message}`);
+    }
+  },
 };
+
+export { redis as redisClient };

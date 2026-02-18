@@ -45,4 +45,33 @@ describe('QueueService', () => {
       }),
     ).rejects.toThrow('Queue enqueue failed');
   });
+
+  test('enqueueAnalysis pushes job to analysis queue', async () => {
+    const job = {
+      documentId: 'doc-1',
+      userId: 'user-1',
+      extractionId: 'ext-1',
+      rawText: 'Legal document text...',
+    };
+
+    await queueService.enqueueAnalysis(job);
+
+    expect(mockLpush).toHaveBeenCalledWith(
+      'kratos:jobs:analysis',
+      JSON.stringify(job),
+    );
+  });
+
+  test('enqueueAnalysis throws on Redis error', async () => {
+    mockLpush.mockRejectedValueOnce(new Error('Connection refused'));
+
+    await expect(
+      queueService.enqueueAnalysis({
+        documentId: 'd',
+        userId: 'u',
+        extractionId: 'e',
+        rawText: 'text',
+      }),
+    ).rejects.toThrow('Analysis queue enqueue failed');
+  });
 });

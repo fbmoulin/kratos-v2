@@ -29,7 +29,9 @@ vi.mock('../services/storage.js', () => ({
 vi.mock('../services/queue.js', () => ({
   queueService: {
     enqueuePdfExtraction: vi.fn().mockResolvedValue(undefined),
+    enqueueAnalysis: vi.fn().mockResolvedValue(undefined),
   },
+  redisClient: { quit: vi.fn().mockResolvedValue('OK') },
 }));
 
 vi.mock('../services/document-repo.js', () => ({
@@ -53,7 +55,18 @@ vi.mock('../services/document-repo.js', () => ({
     }),
     getById: vi.fn().mockResolvedValue(null),
     getExtraction: vi.fn().mockResolvedValue(null),
+    updateStatus: vi.fn().mockResolvedValue(null),
   },
+}));
+
+vi.mock('../services/audit-repo.js', () => ({
+  auditRepo: {
+    create: vi.fn().mockResolvedValue({ id: 'audit-1' }),
+  },
+}));
+
+vi.mock('../middleware/rate-limit.js', () => ({
+  rateLimiter: () => async (_c: unknown, next: () => Promise<void>) => next(),
 }));
 
 vi.mock('ioredis', () => ({
@@ -353,8 +366,9 @@ describe('Document routes', () => {
 
   // ---- POST /:id/analyze ----
 
-  test('POST /v2/documents/:id/analyze runs workflow and returns FIRAC result', async () => {
+  test('POST /v2/documents/:id/analyze enqueues analysis and returns 202', async () => {
     const { documentRepo } = await import('../services/document-repo.js');
+    const { queueService } = await import('../services/queue.js');
     vi.mocked(documentRepo.getById).mockResolvedValueOnce({
       id: 'doc-1',
       userId: 'test-user-id',
@@ -384,20 +398,18 @@ describe('Document routes', () => {
       headers: authHeader,
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(202);
     const body = await res.json();
-    expect(body.data).toHaveProperty('analysisId');
-    expect(body.data).toHaveProperty('firacResult');
-    expect(body.data.firacResult).toHaveProperty('facts');
-    expect(body.data.firacResult).toHaveProperty('conclusion');
-    expect(body.data).toHaveProperty('draftResult');
-    expect(body.data.draftResult).toContain('RELATORIO');
-    expect(body.data).toHaveProperty('routerResult');
-    expect(body.data).toHaveProperty('modelUsed');
-    expect(body.data).toHaveProperty('tokens');
-    expect(body.data.tokens).toHaveProperty('input');
-    expect(body.data.tokens).toHaveProperty('output');
-    expect(body.data).toHaveProperty('latencyMs');
+    expect(body.data.documentId).toBe('doc-1');
+    expect(body.data.status).toBe('processing');
+    expect(body.data.message).toContain('queued');
+    expect(vi.mocked(documentRepo.updateStatus)).toHaveBeenCalledWith('test-user-id', 'doc-1', 'processing');
+    expect(vi.mocked(queueService.enqueueAnalysis)).toHaveBeenCalledWith({
+      documentId: 'doc-1',
+      userId: 'test-user-id',
+      extractionId: 'ext-1',
+      rawText: 'SENTENÇA. Vistos. Trata-se de ação civil...',
+    });
   });
 
   test('POST /v2/documents/:id/analyze returns 404 for non-existent document', async () => {

@@ -4,9 +4,7 @@ import { z } from 'zod';
 import { storageService } from '../services/storage.js';
 import { queueService } from '../services/queue.js';
 import { documentRepo } from '../services/document-repo.js';
-import { analysisRepo } from '../services/analysis-repo.js';
 import { auditRepo } from '../services/audit-repo.js';
-import { createAnalysisWorkflow, createInitialState } from '@kratos/ai';
 import { rateLimiter } from '../middleware/rate-limit.js';
 import { RATE_LIMITS } from '@kratos/core';
 
@@ -145,53 +143,38 @@ documentsRouter.post('/:id/analyze', rateLimiter(RATE_LIMITS.ANALYSIS_PER_MINUTE
     return c.json({ error: { message: 'Extraction not available. Document must be processed first.' } }, 400);
   }
 
-  // Run LangGraph analysis workflow
   const rawText = extraction.rawText || JSON.stringify(extraction.contentJson);
-  const workflow = createAnalysisWorkflow();
-  const initialState = createInitialState({
-    extractionId: extraction.id,
+  if (!rawText || rawText.length < 10) {
+    return c.json({ error: { message: 'Extraction has no usable text content' } }, 400);
+  }
+
+  // Update status to processing
+  await documentRepo.updateStatus(userId, id, 'processing');
+
+  // Enqueue for async processing by analysis-worker
+  await queueService.enqueueAnalysis({
     documentId: id,
     userId,
+    extractionId: extraction.id,
     rawText,
   });
 
-  const finalState = await workflow.invoke(initialState);
-
-  // Check for workflow errors
-  if (finalState.error) {
-    return c.json({ error: { message: `Analysis failed: ${finalState.error}` } }, 500);
-  }
-
-  // Persist analysis
-  const analysis = await analysisRepo.create({
-    extractionId: extraction.id,
-    agentChain: 'supervisor→router→rag→specialist',
-    reasoningTrace: finalState.routerResult?.reasoning ?? undefined,
-    resultJson: {
-      firacResult: finalState.firacResult,
-      draftResult: finalState.draftResult,
-      routerResult: finalState.routerResult,
-    },
-    modelUsed: finalState.modelUsed ?? 'unknown',
-    tokensInput: finalState.tokensInput,
-    tokensOutput: finalState.tokensOutput,
-    latencyMs: finalState.latencyMs,
+  await auditRepo.create({
+    entityType: 'document',
+    entityId: id,
+    action: 'analysis_queued',
+    payloadBefore: { status: doc.status },
+    payloadAfter: { status: 'processing' },
+    userId,
   });
 
   return c.json({
     data: {
-      analysisId: analysis.id,
-      firacResult: finalState.firacResult,
-      draftResult: finalState.draftResult,
-      routerResult: finalState.routerResult,
-      modelUsed: finalState.modelUsed,
-      tokens: {
-        input: finalState.tokensInput,
-        output: finalState.tokensOutput,
-      },
-      latencyMs: finalState.latencyMs,
+      documentId: id,
+      status: 'processing',
+      message: 'Analysis queued. Poll GET /documents/:id for status.',
     },
-  });
+  }, 202);
 });
 
 // ============================================================
