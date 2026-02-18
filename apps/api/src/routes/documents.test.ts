@@ -26,12 +26,12 @@ vi.mock('../services/storage.js', () => ({
   },
 }));
 
-vi.mock('../services/queue.js', () => ({
-  queueService: {
+vi.mock('../services/trigger.js', () => ({
+  triggerService: {
     enqueuePdfExtraction: vi.fn().mockResolvedValue(undefined),
     enqueueAnalysis: vi.fn().mockResolvedValue(undefined),
+    enqueueDocxExport: vi.fn().mockResolvedValue(undefined),
   },
-  redisClient: { quit: vi.fn().mockResolvedValue('OK') },
 }));
 
 vi.mock('../services/document-repo.js', () => ({
@@ -69,11 +69,6 @@ vi.mock('../middleware/rate-limit.js', () => ({
   rateLimiter: () => async (_c: unknown, next: () => Promise<void>) => next(),
 }));
 
-vi.mock('ioredis', () => ({
-  default: vi.fn(() => ({
-    lpush: vi.fn().mockResolvedValue(1),
-  })),
-}));
 
 vi.mock('../services/analysis-repo.js', () => ({
   analysisRepo: {
@@ -369,7 +364,7 @@ describe('Document routes', () => {
 
   test('POST /v2/documents/:id/analyze enqueues analysis and returns 202', async () => {
     const { documentRepo } = await import('../services/document-repo.js');
-    const { queueService } = await import('../services/queue.js');
+    const { triggerService } = await import('../services/trigger.js');
     vi.mocked(documentRepo.getById).mockResolvedValueOnce({
       id: 'doc-1',
       userId: 'test-user-id',
@@ -405,7 +400,7 @@ describe('Document routes', () => {
     expect(body.data.status).toBe('processing');
     expect(body.data.message).toContain('queued');
     expect(vi.mocked(documentRepo.updateStatus)).toHaveBeenCalledWith('test-user-id', 'doc-1', 'processing');
-    expect(vi.mocked(queueService.enqueueAnalysis)).toHaveBeenCalledWith({
+    expect(vi.mocked(triggerService.enqueueAnalysis)).toHaveBeenCalledWith({
       documentId: 'doc-1',
       userId: 'test-user-id',
       extractionId: 'ext-1',

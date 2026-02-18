@@ -7,8 +7,10 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: {
       forks: {
+        singleFork: true,  // run all files in one fork — prevents ESM mock isolation issues
         execArgv: ['--max-old-space-size=4096'],
       },
     },
+    testTimeout: 15_000,  // generous timeout for mock-heavy async tests
   },
 });

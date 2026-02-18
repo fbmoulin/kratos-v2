@@ -7,9 +7,11 @@ vi.mock('../services/storage.js', () => ({
   },
 }));
 
-vi.mock('../services/queue.js', () => ({
-  queueService: {
+vi.mock('../services/trigger.js', () => ({
+  triggerService: {
     enqueuePdfExtraction: vi.fn().mockResolvedValue(undefined),
+    enqueueAnalysis: vi.fn().mockResolvedValue(undefined),
+    enqueueDocxExport: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

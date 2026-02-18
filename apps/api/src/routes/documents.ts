@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../types.js';
 import { z } from 'zod';
 import { storageService } from '../services/storage.js';
-import { queueService } from '../services/queue.js';
+import { triggerService } from '../services/trigger.js';
 import { documentRepo } from '../services/document-repo.js';
 import { analysisRepo } from '../services/analysis-repo.js';
 import { auditRepo } from '../services/audit-repo.js';
@@ -102,7 +102,7 @@ documentsRouter.post('/', rateLimiter(RATE_LIMITS.UPLOAD_PER_MINUTE), async (c) 
     mimeType: file.type,
   });
 
-  await queueService.enqueuePdfExtraction({
+  await triggerService.enqueuePdfExtraction({
     documentId: doc.id,
     userId: doc.userId,
     filePath: doc.filePath!,
@@ -181,7 +181,7 @@ documentsRouter.post('/:id/analyze', rateLimiter(RATE_LIMITS.ANALYSIS_PER_MINUTE
   await documentRepo.updateStatus(userId, id, 'processing');
 
   // Enqueue for async processing by analysis-worker
-  await queueService.enqueueAnalysis({
+  await triggerService.enqueueAnalysis({
     documentId: id,
     userId,
     extractionId: extraction.id,
@@ -310,7 +310,7 @@ documentsRouter.post('/:id/export', rateLimiter(RATE_LIMITS.EXPORT_PER_MINUTE), 
   }
 
   // Queue DOCX generation job
-  await queueService.enqueueDocxExport({
+  await triggerService.enqueueDocxExport({
     documentId: id,
     userId,
     fileName: doc.fileName.replace(/\.pdf$/i, '.docx'),

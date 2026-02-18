@@ -41,7 +41,7 @@ initSentry();
 
 // Validate critical env vars in production — fail fast
 if (process.env.NODE_ENV === 'production') {
-  const required = ['SUPABASE_URL', 'SUPABASE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL', 'REDIS_URL'];
+  const required = ['SUPABASE_URL', 'SUPABASE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL', 'TRIGGER_SECRET_KEY'];
   const missing = required.filter((k) => !process.env[k]);
   if (missing.length > 0) {
     throw new Error(`Missing required env vars: ${missing.join(', ')}`);
