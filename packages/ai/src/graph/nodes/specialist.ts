@@ -46,7 +46,7 @@ export async function specialistNode(
       ? response.content
       : JSON.stringify(response.content);
 
-    const parsed = parseLlmJson(content);
+    const parsed = parseLlmJson<Record<string, unknown>>(content);
 
     const firacResult: FIRACResult = {
       facts: String(parsed.facts || ''),

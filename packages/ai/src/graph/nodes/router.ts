@@ -27,14 +27,14 @@ export async function routerNode(
       ? response.content
       : JSON.stringify(response.content);
 
-    const parsed = parseLlmJson(content);
+    const parsed = parseLlmJson<Record<string, unknown>>(content);
 
     // Validate enum values with fallbacks
-    const legalMatter = VALID_LEGAL_MATTERS.has(parsed.legalMatter)
+    const legalMatter = VALID_LEGAL_MATTERS.has(parsed.legalMatter as LegalMatter)
       ? (parsed.legalMatter as LegalMatter)
       : LegalMatter.CIVIL;
 
-    const decisionType = VALID_DECISION_TYPES.has(parsed.decisionType)
+    const decisionType = VALID_DECISION_TYPES.has(parsed.decisionType as DecisionType)
       ? (parsed.decisionType as DecisionType)
       : DecisionType.DESPACHO;
 
