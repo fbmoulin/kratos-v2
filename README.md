@@ -52,7 +52,7 @@ O sistema é projetado para ser escalável, seguro e eficiente, utilizando as te
 | **Orquestração de IA** | LangGraph | Modela e executa o fluxo de agentes de IA. |
 | **Tracing de IA** | LangSmith | Monitoramento e depuração das cadeias de agentes. |
 | **Processamento de PDF** | Docling, pdfplumber, Gemini 2.5 Flash | Pipeline híbrido para extração de dados de PDFs. |
-| **Fila de Jobs** | Celery (Python) com Redis | Processamento assíncrono e pesado de documentos. |
+| **Fila de Jobs** | ioredis + Redis (BRPOP) | Processamento assíncrono de análises e extração de PDFs. |
 | **Autenticação** | Supabase Auth | Gerenciamento de usuários e segurança. |
 | **Deploy** | Vercel (Frontend), Railway (Backend) | Plataformas de deploy modernas, escaláveis e com excelente DX. |
 | **CI/CD** | GitHub Actions | Automação de testes e deploys. |
@@ -73,7 +73,8 @@ kratos/
 │   ├── ai/           # Configuração dos agentes LangGraph, prompts
 │   └── tools/        # Ferramentas utilitárias (ex: gerador de DOCX)
 ├── workers/
-│   └── pdf-worker/   # Worker assíncrono para processamento de PDF
+│   ├── pdf-worker/       # Worker Python para extração de PDF
+│   └── analysis-worker/  # Worker Node.js para pipeline LangGraph
 ├── .github/          # Workflows de CI/CD
 ├── docs/             # Documentação do projeto
 └── ...
@@ -137,7 +138,7 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 
 -   **Frontend**: Disponível em `http://localhost:5173`
 -   **Backend API**: Disponível em `http://localhost:3001`
--   **Celery Worker**: Iniciado e pronto para consumir jobs da fila.
+-   **Workers**: PDF e Analysis workers prontos para consumir jobs da fila Redis.
 
 ## Status do Desenvolvimento
 
@@ -148,12 +149,12 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 | **Fase 2** | ✅ Concluída | LangGraph pipeline (supervisor → router → RAG → FIRAC+ → drafter), model-router, 70 testes AI |
 | **Fase 2.5** | ✅ Concluída | DB schema aplicado (8 tabelas + pgvector), 100 precedentes STJ seedados, scripts E2E |
 | **Fase 3** | ✅ Concluída | Frontend (React 19 + Vite 6 + Tailwind 4 + shadcn/ui), Dashboard, HITL review UI, 28 testes web |
-| **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Railway), 179 testes |
-| **Hardening** | 🔄 Em progresso | Sprints 1-2 completos (segurança, build/deploy), Sprints 3-5 pendentes |
+| **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Railway) |
+| **Hardening** | ✅ Concluída | 23 tasks: segurança, build/deploy, async pipeline, API robustness, frontend fixes |
 
 ### Métricas Atuais
-- **179 testes** passando (70 AI + 26 API + 34 Web + 18 Core + 31 DB)
-- **10 test suites** across 5 packages
+- **223 testes** passando (75 AI + 38 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 3 Analysis Worker)
+- **11 test suites** across 7 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d
 - **4 CI/CD workflows** (CI, deploy-staging, deploy-production, integration)
