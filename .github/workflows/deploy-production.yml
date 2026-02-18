@@ -33,9 +33,9 @@ jobs:
   deploy-web:
     name: Deploy Web (Vercel Production)
     needs: test
-    if: ${{ secrets.VERCEL_TOKEN != '' }}
     runs-on: ubuntu-latest
     environment: production
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
