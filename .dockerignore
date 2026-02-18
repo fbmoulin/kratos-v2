@@ -14,9 +14,6 @@ LICENSE
 # Frontend (not needed for API)
 apps/web/
 
-# Tools package (not a dependency of API)
-packages/tools/
-
 # Workers source (only package.json needed for workspace resolution)
 workers/pdf-worker/src/
 workers/pdf-worker/tests/
