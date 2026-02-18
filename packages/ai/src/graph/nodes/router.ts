@@ -4,6 +4,7 @@ import { LegalMatter, DecisionType, AIModel } from '@kratos/core';
 import { createGoogleModel } from '../../providers/google.js';
 import { buildRouterPrompt } from '../../prompts/templates.js';
 import { classifyComplexity, selectModel } from '../../router/model-router.js';
+import { parseLlmJson } from '../../utils/parse-llm-json.js';
 
 const VALID_LEGAL_MATTERS = new Set(Object.values(LegalMatter));
 const VALID_DECISION_TYPES = new Set(Object.values(DecisionType));
@@ -26,7 +27,7 @@ export async function routerNode(
       ? response.content
       : JSON.stringify(response.content);
 
-    const parsed = JSON.parse(content);
+    const parsed = parseLlmJson(content);
 
     // Validate enum values with fallbacks
     const legalMatter = VALID_LEGAL_MATTERS.has(parsed.legalMatter)

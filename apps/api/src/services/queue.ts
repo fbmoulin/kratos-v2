@@ -1,7 +1,15 @@
 import { Redis } from 'ioredis';
+import { logger } from '../lib/logger.js';
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   family: 0, // dual-stack: try IPv6 first, fallback to IPv4 (Railway private networking is IPv6)
+  maxRetriesPerRequest: 3,
+  enableOfflineQueue: false,
+  retryStrategy: (times) => Math.min(times * 200, 3000),
+});
+
+redis.on('error', (err) => {
+  logger.error({ err: err.message }, '[Redis] Connection error');
 });
 
 const QUEUE_KEY = 'kratos:jobs:pdf';

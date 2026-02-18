@@ -29,6 +29,7 @@ import type { AppEnv } from './types.js';
 import { cors } from 'hono/cors';
 import { logger as honoLogger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
+import { randomUUID } from 'node:crypto';
 import { APP_NAME, APP_VERSION } from '@kratos/core';
 import { healthRouter } from './routes/health.js';
 import { documentsRouter } from './routes/documents.js';
@@ -55,6 +56,15 @@ const app = new Hono<AppEnv>().basePath('/v2');
 // Global middleware — applied to all routes
 app.use('*', honoLogger());
 app.use('*', secureHeaders());
+
+// Request ID for log correlation
+app.use('*', async (c, next) => {
+  const requestId = c.req.header('X-Request-ID') || randomUUID();
+  c.set('requestId', requestId);
+  c.header('X-Request-ID', requestId);
+  await next();
+});
+
 app.use(
   '*',
   cors({
@@ -86,7 +96,7 @@ app.get('/', (c) => {
 app.onError((err, c) => {
   captureError(err, { path: c.req.path, method: c.req.method });
   logger.error({ err, method: c.req.method, path: c.req.path }, 'Unhandled error');
-  return c.json({ error: 'Internal server error' }, 500);
+  return c.json({ error: { message: 'Internal server error' } }, 500);
 });
 
 // Start server (skipped during tests to allow `app.request()` testing)

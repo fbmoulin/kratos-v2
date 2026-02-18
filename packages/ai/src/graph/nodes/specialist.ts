@@ -4,6 +4,7 @@ import type { AIModel as _AIModel } from '@kratos/core';
 import { createAnthropicModel } from '../../providers/anthropic.js';
 import { buildFiracEnterprisePrompt } from '../../prompts/firac-enterprise.js';
 import { selectModel } from '../../router/model-router.js';
+import { parseLlmJson } from '../../utils/parse-llm-json.js';
 
 /**
  * Specialist agent node — generates FIRAC analysis using Claude.
@@ -45,7 +46,7 @@ export async function specialistNode(
       ? response.content
       : JSON.stringify(response.content);
 
-    const parsed = JSON.parse(content);
+    const parsed = parseLlmJson(content);
 
     const firacResult: FIRACResult = {
       facts: String(parsed.facts || ''),

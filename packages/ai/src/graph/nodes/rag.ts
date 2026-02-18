@@ -72,8 +72,9 @@ export async function ragNode(
       ragContext,
       currentStep: 'specialist',
     };
-  } catch {
-    // Non-fatal: proceed without RAG context
+  } catch (err) {
+    // Non-fatal: log for monitoring, proceed without RAG context
+    console.error('[RAG] Search failed — proceeding without context:', (err as Error).message);
     return {
       ragContext: {
         vectorResults: [],

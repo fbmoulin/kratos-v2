@@ -21,7 +21,11 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './schema/documents.js';
 
 /** Raw postgres.js connection — use for graceful shutdown via `queryClient.end()`. */
-const queryClient = postgres(process.env.DATABASE_URL!);
+const queryClient = postgres(process.env.DATABASE_URL!, {
+  max: 5,
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
 
 /** Drizzle ORM instance with full schema awareness for type-safe queries. */
 export const db = drizzle(queryClient, { schema });

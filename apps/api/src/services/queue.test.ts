@@ -3,10 +3,15 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 const mockLpush = vi.fn().mockResolvedValue(1);
 const mockQuit = vi.fn().mockResolvedValue('OK');
 
+vi.mock('../lib/logger.js', () => ({
+  logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+}));
+
 vi.mock('ioredis', () => ({
   Redis: vi.fn(() => ({
     lpush: mockLpush,
     quit: mockQuit,
+    on: vi.fn(),
   })),
 }));
 

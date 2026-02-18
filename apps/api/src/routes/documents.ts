@@ -16,6 +16,12 @@ const reviewSchema = z.object({
 
 export const documentsRouter = new Hono<AppEnv>();
 
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.enum(['pending', 'processing', 'completed', 'failed', 'reviewed']).optional(),
+});
+
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46]; // %PDF
 
@@ -36,10 +42,17 @@ function sanitizeFileName(name: string): string {
 
 documentsRouter.get('/', async (c) => {
   const userId = c.get('userId');
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '20');
-  const status = c.req.query('status');
+  const parsed = listQuerySchema.safeParse({
+    page: c.req.query('page'),
+    limit: c.req.query('limit'),
+    status: c.req.query('status'),
+  });
 
+  if (!parsed.success) {
+    return c.json({ error: { message: 'Invalid query parameters', details: parsed.error.flatten() } }, 400);
+  }
+
+  const { page, limit, status } = parsed.data;
   const result = await documentRepo.listByUser(userId, page, limit, status);
   return c.json(result);
 });
