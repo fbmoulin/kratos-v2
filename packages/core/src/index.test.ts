@@ -49,7 +49,7 @@ describe('@kratos/core enums', () => {
 describe('@kratos/core constants', () => {
   test('APP_NAME and APP_VERSION are correct', () => {
     expect(APP_NAME).toBe('KRATOS v2');
-    expect(APP_VERSION).toBe('2.0.0');
+    expect(APP_VERSION).toBe('2.4.0');
   });
 
   test('CACHE_TTL values are positive numbers', () => {

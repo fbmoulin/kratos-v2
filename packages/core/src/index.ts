@@ -190,7 +190,7 @@ export interface RAGContext {
 // ============================================================
 
 export const APP_NAME = 'KRATOS v2';
-export const APP_VERSION = '2.0.0';
+export const APP_VERSION = '2.4.0';
 
 /** Cache TTL values in seconds for Redis/CDN caching strategies. */
 export const CACHE_TTL = {
