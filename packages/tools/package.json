@@ -1,6 +1,6 @@
 {
   "name": "@kratos/tools",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,7 +17,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@kratos/core": "workspace:*"
+    "@kratos/core": "workspace:*",
+    "docx": "^9.5.3"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

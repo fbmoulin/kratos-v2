@@ -89,6 +89,7 @@ vi.mock('../services/analysis-repo.js', () => ({
       createdAt: new Date(),
     }),
     getByExtractionId: vi.fn().mockResolvedValue(null),
+    updateResultJson: vi.fn().mockResolvedValue(null),
   },
 }));
 

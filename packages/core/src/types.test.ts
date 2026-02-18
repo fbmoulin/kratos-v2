@@ -39,7 +39,7 @@ describe('Existing enums remain intact', () => {
   });
 
   test('DocumentStatus values', () => {
-    expect(Object.values(DocumentStatus)).toHaveLength(4);
+    expect(Object.values(DocumentStatus)).toHaveLength(5);
   });
 
   test('UserRole values', () => {

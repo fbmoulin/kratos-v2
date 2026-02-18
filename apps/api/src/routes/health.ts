@@ -13,6 +13,7 @@
  */
 import { Hono } from 'hono';
 import { APP_NAME, APP_VERSION } from '@kratos/core';
+import { redisClient } from '../services/queue.js';
 
 export const healthRouter = new Hono();
 
@@ -67,17 +68,10 @@ healthRouter.get('/ready', async (c) => {
     checks.database = 'unavailable';
   }
 
-  // Redis check
+  // Redis check — ping the shared singleton from queue service
   try {
-    const { Redis } = await import('ioredis');
-    const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-      connectTimeout: 2000,
-      lazyConnect: true,
-      family: 0,
-    });
-    await redis.ping();
+    await redisClient.ping();
     checks.redis = 'ok';
-    redis.disconnect();
   } catch {
     checks.redis = 'unavailable';
   }

@@ -1,6 +1,6 @@
 {
   "name": "@kratos/db",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -23,10 +23,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@kratos/core": "workspace:*",
     "dotenv": "^16.4.0",
     "drizzle-orm": "^0.39.0",
-    "postgres": "^3.4.0",
-    "@kratos/core": "workspace:*"
+    "pino": "^9.6.0",
+    "postgres": "^3.4.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.0",

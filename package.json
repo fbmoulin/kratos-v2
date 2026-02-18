@@ -1,6 +1,6 @@
 {
   "name": "kratos-v2",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "type": "module",
   "description": "KRATOS v2 - Knowledge-driven Reasoning and Automated Text Output System",
@@ -30,7 +30,7 @@
     "typescript-eslint": "^8.55.0"
   },
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.15.0"

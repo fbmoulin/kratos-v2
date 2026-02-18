@@ -27,7 +27,7 @@ vi.mock('ioredis', () => ({
 }));
 
 vi.mock('../services/analysis-repo.js', () => ({
-  analysisRepo: { create: vi.fn(), getByExtractionId: vi.fn() },
+  analysisRepo: { create: vi.fn(), getByExtractionId: vi.fn(), updateResultJson: vi.fn() },
 }));
 
 vi.mock('@kratos/ai', () => ({

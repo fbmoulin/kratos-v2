@@ -36,4 +36,14 @@ export const analysisRepo = {
 
     return analysis ?? null;
   },
+
+  async updateResultJson(analysisId: string, resultJson: Record<string, unknown>) {
+    const [analysis] = await db
+      .update(analyses)
+      .set({ resultJson })
+      .where(eq(analyses.id, analysisId))
+      .returning();
+
+    return analysis ?? null;
+  },
 };

@@ -191,7 +191,7 @@ Upload a new PDF document for processing.
 
 #### `GET /v2/documents/:id`
 
-Get details for a specific document. Returns 404 if not found or not owned by user.
+Get full pipeline context for a document — includes extraction and analysis in a single request. Returns 404 if not found or not owned by user.
 
 **Response (200):**
 ```json
@@ -203,14 +203,34 @@ Get details for a specific document. Returns 404 if not found or not owned by us
     "filePath": "user-uuid/doc-uuid/peticao_inicial.pdf",
     "fileSize": 2048000,
     "mimeType": "application/pdf",
-    "status": "completed",
+    "status": "reviewed",
     "pages": 12,
     "errorMessage": null,
     "createdAt": "2026-02-14T20:00:00.000Z",
     "updatedAt": "2026-02-14T20:01:00.000Z"
+  },
+  "extraction": {
+    "id": "ext-uuid",
+    "documentId": "doc-uuid",
+    "rawText": "Trata-se de acao...",
+    "createdAt": "2026-02-14T20:01:00.000Z"
+  },
+  "analysis": {
+    "id": "ana-uuid",
+    "extractionId": "ext-uuid",
+    "modelUsed": "claude-sonnet-4",
+    "resultJson": {
+      "firac": { "facts": "...", "issue": "...", "rule": "...", "analysis": "...", "conclusion": "..." },
+      "router": { "legalMatter": "bancario", "complexity": 72 },
+      "draft": "RELATÓRIO\n\n...",
+      "rawText": "Trata-se de acao..."
+    },
+    "createdAt": "2026-02-14T20:02:00.000Z"
   }
 }
 ```
+
+> `analysis` and `extraction` are `null` if the document has not been processed yet.
 
 **Error (404):**
 ```json
@@ -254,16 +274,48 @@ Get extraction results for a processed document. Returns 404 if document not fou
 
 #### `POST /v2/documents/:id/analyze`
 
-Queue AI analysis for a document. Returns immediately with tracking ID.
+Queue AI analysis for a document. Async — returns 202 immediately, pipeline runs in background.
 
 **Response (202):**
 ```json
 {
   "documentId": "c7a8b9d0-...",
-  "analysisId": "f3g4h5i6-...",
-  "status": "queued",
-  "message": "Analysis endpoint scaffold - Phase 2"
+  "status": "queued"
 }
+```
+
+---
+
+#### `POST /v2/documents/:id/export`
+
+Enqueue DOCX export for a reviewed document. Async — `docx-worker` generates and uploads the file.
+
+**Requires:** Document status must be `reviewed`.
+
+**Response (202):**
+```json
+{ "status": "queued" }
+```
+
+---
+
+#### `GET /v2/documents/:id/export`
+
+Get signed download URL for the generated DOCX file. Poll this endpoint after `POST /export` until `url` is present (typically within 5–10s).
+
+**Response (200) — ready:**
+```json
+{
+  "data": {
+    "url": "https://jzgdorcvfxlahffqnyor.supabase.co/storage/v1/object/sign/documents/...",
+    "expiresIn": 3600
+  }
+}
+```
+
+**Response (200) — not ready yet:**
+```json
+{ "data": null }
 ```
 
 ---

@@ -1,3 +1,4 @@
+import type { AIMessage } from '@langchain/core/messages';
 import type { AgentStateType } from '../state.js';
 import type { FIRACResult } from '@kratos/core';
 import type { AIModel as _AIModel } from '@kratos/core';
@@ -40,7 +41,7 @@ export async function specialistNode(
       ragContext: ragText,
     });
 
-    const response = await model.invoke(prompt);
+    const response = await model.invoke(prompt) as AIMessage;
 
     const content = typeof response.content === 'string'
       ? response.content
@@ -57,8 +58,7 @@ export async function specialistNode(
     };
 
     // Extract token usage from response metadata
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const usage = (response as any).usage_metadata;
+    const usage = response.usage_metadata;
     const tokensInput = Number(usage?.input_tokens) || 0;
     const tokensOutput = Number(usage?.output_tokens) || 0;
 

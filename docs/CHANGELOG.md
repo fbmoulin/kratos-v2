@@ -7,6 +7,40 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.6.0] - 2026-02-18 — DOCX Worker + Code Quality Fixes
+
+### Adicionado
+
+#### DOCX Worker (`workers/docx-worker/`)
+- **DOCX export worker:** New Node.js service consuming `kratos:jobs:docx` Redis queue — fetches analysis, builds `.docx` buffer via `@kratos/tools`, uploads to Supabase Storage
+- **`@kratos/tools` buildDocxBuffer:** Full markdown-aware DOCX generation (headings H1–H3, bullet lists, paragraphs) using `docx` library
+- **docker-compose.yml:** Added `docx-worker` service (profile: worker)
+- **`GET /v2/documents/:id/export`:** New endpoint — returns signed Supabase Storage URL for ready DOCX file
+- **useExport polling:** Frontend polls GET `/export` every 5s (max 12 attempts × 60s) before redirecting user to download URL
+- **Per-worker `turbo.json`:** `analysis-worker`, `docx-worker`, `pdf-worker` each have `outputs: []` override — eliminates Turborepo build warnings
+- **`analysisRepo.updateResultJson()`:** New method for updating analysis JSON after HITL review
+- **2 new tests:** `@kratos/docx-worker` — worker + job processing
+
+#### Document Detail Enhancement
+- **`GET /v2/documents/:id`:** Now returns `{ data: doc, extraction, analysis }` — full pipeline context in one request
+- **Analysis payload normalization:** FIRAC, router, draft fields aliased from multiple possible keys for backwards compat
+
+#### Core
+- **`DocumentStatus.REVIEWED`:** Added `'reviewed'` status value to lifecycle enum
+
+### Corrigido (Code Quality)
+- **`@kratos/core` test:** `DocumentStatus` assertion updated to `toHaveLength(5)` (was 4, missed `REVIEWED`)
+- **Redis singleton in health route:** `GET /v2/health/ready` now pings shared `redisClient` instead of creating a new connection per request
+- **`@kratos/db` migrate.ts:** Replaced `console.log` with pino structured logger; added `pino` as explicit dependency
+- **AI nodes typing:** `drafter.ts` + `specialist.ts` replaced `(response as any).usage_metadata` with `AIMessage` import from `@langchain/core/messages` — eliminates `eslint-disable` suppressions
+- **Node engine requirement:** `package.json` changed `>=22.0.0` → `>=20.0.0` (project runs on Node 20 LTS)
+
+### Modificado
+- **All `package.json`:** Version `2.5.0` → `2.6.0`
+- **`@kratos/core`:** `APP_VERSION` constant reflects `2.6.0`
+
+---
+
 ## [2.5.0] - 2026-02-18 — Production Hardening (23 tasks, 5 sprints)
 
 ### Adicionado

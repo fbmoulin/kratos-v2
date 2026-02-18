@@ -41,5 +41,7 @@ export const api = {
       fetchWithAuth(`/documents/${id}/review`, { method: 'PUT', body: JSON.stringify(payload) }),
     exportDocx: (id: string) =>
       fetchWithAuth(`/documents/${id}/export`, { method: 'POST' }),
+    getExport: (id: string) =>
+      fetchWithAuth(`/documents/${id}/export`),
   },
 };

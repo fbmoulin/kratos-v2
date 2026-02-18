@@ -1,5 +1,5 @@
 {
-  "name": "@kratos/analysis-worker",
+  "name": "@kratos/docx-worker",
   "version": "2.6.0",
   "private": true,
   "type": "module",
@@ -12,9 +12,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@kratos/ai": "workspace:*",
     "@kratos/core": "workspace:*",
     "@kratos/db": "workspace:*",
+    "@kratos/tools": "workspace:*",
+    "@supabase/supabase-js": "^2.49.0",
     "drizzle-orm": "^0.39.0",
     "ioredis": "^5.4.0",
     "pino": "^9.6.0"

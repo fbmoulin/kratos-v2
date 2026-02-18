@@ -1,3 +1,4 @@
+import type { AIMessage } from '@langchain/core/messages';
 import type { AgentStateType } from '../state.js';
 import { createAnthropicModel } from '../../providers/anthropic.js';
 import { selectModel } from '../../router/model-router.js';
@@ -46,15 +47,14 @@ export async function drafterNode(
     const response = await model.invoke([
       { role: 'system', content: systemPrompt },
       { role: 'human', content: xmlInput },
-    ]);
+    ]) as AIMessage;
 
     const draftResult = typeof response.content === 'string'
       ? response.content
       : JSON.stringify(response.content);
 
     // Extract token usage
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const usage = (response as any).usage_metadata;
+    const usage = response.usage_metadata;
     const drafterTokensIn = Number(usage?.input_tokens) || 0;
     const drafterTokensOut = Number(usage?.output_tokens) || 0;
 

@@ -32,7 +32,7 @@ vi.mock('../services/document-repo.js', () => ({
 }));
 
 vi.mock('../services/analysis-repo.js', () => ({
-  analysisRepo: { create: vi.fn() },
+  analysisRepo: { create: vi.fn(), getByExtractionId: vi.fn(), updateResultJson: vi.fn() },
 }));
 
 vi.mock('../services/audit-repo.js', () => ({

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { storageService } from '../services/storage.js';
 import { queueService } from '../services/queue.js';
 import { documentRepo } from '../services/document-repo.js';
+import { analysisRepo } from '../services/analysis-repo.js';
 import { auditRepo } from '../services/audit-repo.js';
 import { rateLimiter } from '../middleware/rate-limit.js';
 import { RATE_LIMITS } from '@kratos/core';
@@ -120,7 +121,22 @@ documentsRouter.get('/:id', async (c) => {
     return c.json({ error: { message: 'Document not found' } }, 404);
   }
 
-  return c.json({ data: doc });
+  const extraction = await documentRepo.getExtraction(id);
+  const analysis = extraction ? await analysisRepo.getByExtractionId(extraction.id) : null;
+
+  const resultJson = (analysis?.resultJson ?? {}) as Record<string, unknown>;
+  const analysisPayload = analysis ? {
+    ...analysis,
+    resultJson: {
+      ...resultJson,
+      firac: resultJson.firac ?? resultJson.firacResult ?? null,
+      router: resultJson.router ?? resultJson.routerResult ?? null,
+      draft: resultJson.reviewedDraft ?? resultJson.draft ?? resultJson.draftResult ?? null,
+      rawText: resultJson.rawText ?? extraction?.rawText ?? null,
+    },
+  } : null;
+
+  return c.json({ data: doc, extraction, analysis: analysisPayload });
 });
 
 documentsRouter.get('/:id/extraction', async (c) => {
@@ -221,6 +237,19 @@ documentsRouter.put('/:id/review', async (c) => {
     rejected: 'pending',
   };
 
+  if (action === 'revised' && revisedContent && typeof revisedContent.draft === 'string') {
+    const extraction = await documentRepo.getExtraction(id);
+    if (extraction) {
+      const analysis = await analysisRepo.getByExtractionId(extraction.id);
+      if (analysis) {
+        await analysisRepo.updateResultJson(analysis.id, {
+          ...(analysis.resultJson ?? {}),
+          reviewedDraft: revisedContent.draft,
+        });
+      }
+    }
+  }
+
   const updatedDoc = await documentRepo.updateStatus(userId, id, statusMap[action]);
 
   await auditRepo.create({
@@ -233,6 +262,34 @@ documentsRouter.put('/:id/review', async (c) => {
   });
 
   return c.json({ data: updatedDoc });
+});
+
+// ============================================================
+// GET /:id/export — Fetch DOCX signed URL (if ready)
+// ============================================================
+
+documentsRouter.get('/:id/export', async (c) => {
+  const userId = c.get('userId');
+  const id = c.req.param('id');
+
+  const doc = await documentRepo.getById(userId, id);
+  if (!doc) {
+    return c.json({ error: { message: 'Document not found' } }, 404);
+  }
+
+  if (doc.status !== 'reviewed') {
+    return c.json({ error: { message: 'Document must be reviewed before export' } }, 400);
+  }
+
+  const fileName = doc.fileName.replace(/\.pdf$/i, '.docx');
+  const path = `${userId}/${id}/${fileName}`;
+
+  try {
+    const signedUrl = await storageService.getSignedUrl(path, 600);
+    return c.json({ data: { url: signedUrl } });
+  } catch {
+    return c.json({ error: { message: 'DOCX not ready yet' } }, 404);
+  }
 });
 
 // ============================================================

@@ -1,6 +1,6 @@
 # Project Index: KRATOS v2
 
-Generated: 2026-02-16
+Generated: 2026-02-18 (v2.6.0)
 
 ## Overview
 
@@ -9,7 +9,7 @@ Generated: 2026-02-16
 ## Project Structure
 
 ```
-kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
+kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 20+)
 ├── apps/
 │   ├── api/                    # Hono REST API (tsx runtime, port 3001)
 │   │   ├── src/index.ts        # Entry: Hono app, /v2 base, middleware chain, SIGTERM handler
@@ -33,14 +33,20 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 │   │   ├── src/rag/            # embeddings.ts, vector-search.ts, graph-search.ts, hybrid-search.ts
 │   │   ├── src/router/         # model-router.ts (7-factor complexity, 5-tier selection)
 │   │   └── src/providers/      # anthropic.ts, google.ts (LangChain wrappers)
-│   └── tools/                  # PDF/DOCX utilities (Phase 3 stub)
-│       └── src/index.ts        # Placeholder — TODO Phase 3
+│   └── tools/                  # DOCX export utilities
+│       └── src/index.ts        # buildDocxBuffer (markdown → .docx: H1–H3, bullets, paragraphs)
 ├── workers/
-│   └── pdf-worker/             # Python async worker (Redis BRPOP queue)
-│       ├── src/tasks/extract_pdf.py  # Main loop: download → extract → validate → save
-│       ├── src/services/        # pdf_extraction.py (pdfplumber), storage.py, database.py
-│       ├── src/models/extraction.py  # Pydantic: ExtractionResult, TableData, ImageData
-│       └── tests/               # 5 test files (pytest)
+│   ├── pdf-worker/             # Python async worker (Redis BRPOP queue)
+│   │   ├── src/tasks/extract_pdf.py  # Main loop: download → extract → validate → save
+│   │   ├── src/services/        # pdf_extraction.py (pdfplumber), storage.py, database.py
+│   │   ├── src/models/extraction.py  # Pydantic: ExtractionResult, TableData, ImageData
+│   │   └── tests/               # 5 test files (pytest)
+│   ├── analysis-worker/        # Node.js async worker (LangGraph pipeline)
+│   │   ├── src/worker.ts       # Main loop: BRPOP → LangGraph pipeline → save analysis
+│   │   └── src/worker.test.ts  # 3 tests
+│   └── docx-worker/            # Node.js async worker (DOCX export)
+│       ├── src/worker.ts       # Main loop: BRPOP → fetch analysis → buildDocxBuffer → upload
+│       └── src/worker.test.ts  # 2 tests
 ├── scripts/                    # seed-precedents.ts, test-e2e-full.ts, test-e2e-pipeline.ts, init_project.sh
 ├── docs/                       # 20 markdown docs (architecture, API, roadmap, deploy, etc.)
 ├── docker-compose.yml          # Redis 7 + Redis Commander (dev) + pdf-worker (profiles: [worker])
@@ -87,15 +93,17 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
   - `GET /v2/health/ready` — Readiness probe (public)
   - `GET /v2/documents` — List (paginated, owner-scoped)
   - `POST /v2/documents` — Upload PDF (50MB limit, multipart)
-  - `GET /v2/documents/:id` — Get document
-  - `GET /v2/documents/:id/extraction` — Get extraction result
-  - `POST /v2/documents/:id/analyze` — Trigger AI analysis (LangGraph pipeline)
-  - `POST /v2/documents/:id/review` — HITL approve/reject
+  - `GET /v2/documents/:id` — Get document with extraction + analysis payload
+  - `GET /v2/documents/:id/extraction` — Get raw extraction result
+  - `POST /v2/documents/:id/analyze` — Trigger AI analysis (async 202, LangGraph pipeline)
+  - `PUT /v2/documents/:id/review` — HITL approve/reject
+  - `POST /v2/documents/:id/export` — Enqueue DOCX export job
+  - `GET /v2/documents/:id/export` — Get signed DOCX download URL (poll until ready)
   - `GET /v2/health/metrics` — Request count, error rate, avg latency
-- **Services:** `storageService` (Supabase Storage), `queueService` (Redis LPUSH), `documentRepo` (Drizzle queries), `analysisService` (LangGraph), `reviewService`
+- **Services:** `storageService` (Supabase Storage), `queueService` (Redis LPUSH, 3 queues), `documentRepo` (Drizzle queries), `analysisRepo` (analysis CRUD), `auditRepo`
 - **Monitoring:** Sentry (`@sentry/node` via `app.onError`)
 - **Build:** `tsc --noEmit` type-check (tsx runtime, no emit)
-- **Tests:** 26 passing (5 suites)
+- **Tests:** 38 passing (7 suites)
 
 ### @kratos/web (apps/web) — Phase 3 DONE
 - **Purpose:** React 19 frontend — Dashboard, HITL review, document management
@@ -109,16 +117,31 @@ kratos-v2/                      # Turborepo monorepo (pnpm 9, Node 22+)
 - **Purpose:** LangGraph agent orchestration, RAG engine, prompt management
 - **Pipeline:** supervisor → router (Gemini Flash) → rag (pgvector) → specialist (FIRAC+ Claude) → drafter (domain minuta)
 - **Modules:** graph/ (state, workflow, 5 nodes), prompts/ (firac-enterprise, drafter, templates), rag/ (embeddings, vector-search, graph-search, hybrid-search), router/ (model-router), providers/ (anthropic, google)
-- **Tests:** 70 passing (15 suites)
+- **Tests:** 75 passing (16 suites)
 
-### @kratos/tools (packages/tools) — Phase 3 stub
-- **Purpose:** DOCX export, input sanitization
+### @kratos/tools (packages/tools)
+- **Purpose:** DOCX export utilities
+- **Exports:** `buildDocxBuffer(content, options)` — converts markdown text to `.docx` Buffer using `docx` library
+- **Supports:** H1–H3 headings, bullet lists (`-`/`*`), plain paragraphs, optional document title
 
 ### pdf-worker (workers/pdf-worker)
 - **Purpose:** Async PDF extraction via Redis queue
 - **Pipeline:** Redis BRPOP → Supabase download → pdfplumber extract → Pydantic validate → DB save
 - **Queue key:** `kratos:jobs:pdf`
 - **Models:** `ExtractionResult` (text, tables, images, metadata)
+
+### analysis-worker (workers/analysis-worker)
+- **Purpose:** Async LangGraph AI pipeline via Redis queue
+- **Pipeline:** Redis BRPOP → LangGraph (supervisor→router→rag→specialist→drafter) → save analysis to DB
+- **Queue key:** `kratos:jobs:analysis`
+- **Tests:** 3 passing
+
+### docx-worker (workers/docx-worker)
+- **Purpose:** Async DOCX export generation and upload via Redis queue
+- **Pipeline:** Redis BRPOP → fetch analysis → `buildDocxBuffer` → upload to Supabase Storage
+- **Queue key:** `kratos:jobs:docx`
+- **Storage path:** `{userId}/{documentId}/{fileName}.docx` (bucket: `documents`)
+- **Tests:** 2 passing
 
 ## Database Schema (Supabase project `jzgdorcvfxlahffqnyor`)
 

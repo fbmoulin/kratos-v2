@@ -22,6 +22,8 @@ export enum DocumentStatus {
   PROCESSING = 'processing',
   /** Extraction and analysis finished successfully */
   COMPLETED = 'completed',
+  /** Analysis reviewed and approved/revised by a human */
+  REVIEWED = 'reviewed',
   /** Processing encountered an unrecoverable error */
   FAILED = 'failed',
 }
@@ -190,7 +192,7 @@ export interface RAGContext {
 // ============================================================
 
 export const APP_NAME = 'KRATOS v2';
-export const APP_VERSION = '2.5.0';
+export const APP_VERSION = '2.6.0';
 
 /** Cache TTL values in seconds for Redis/CDN caching strategies. */
 export const CACHE_TTL = {

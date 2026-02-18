@@ -56,6 +56,24 @@ services:
       - worker
     restart: unless-stopped
 
+  # DOCX Worker (Node) — opt-in via: docker compose --profile worker up
+  docx-worker:
+    build:
+      context: ./workers/docx-worker
+      dockerfile: Dockerfile
+    container_name: kratos-docx-worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+    restart: unless-stopped
+
 volumes:
   redis-data:
     driver: local

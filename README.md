@@ -1,6 +1,6 @@
 # KRATOS - Sistema de Automação Jurídica de Elite
 
-![Versão](https://img.shields.io/badge/version-2.5.0-blue)
+![Versão](https://img.shields.io/badge/version-2.6.0-blue)
 ![Status](https://img.shields.io/badge/status-beta-brightgreen)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/seu-usuario/kratos/ci.yml?branch=main)](https://github.com/seu-usuario/kratos/actions)
 [![Licença](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -74,7 +74,8 @@ kratos/
 │   └── tools/        # Ferramentas utilitárias (ex: gerador de DOCX)
 ├── workers/
 │   ├── pdf-worker/       # Worker Python para extração de PDF
-│   └── analysis-worker/  # Worker Node.js para pipeline LangGraph
+│   ├── analysis-worker/  # Worker Node.js para pipeline LangGraph
+│   └── docx-worker/      # Worker Node.js para exportação DOCX
 ├── .github/          # Workflows de CI/CD
 ├── docs/             # Documentação do projeto
 └── ...
@@ -88,7 +89,7 @@ Siga estas instruções para configurar e executar o ambiente de desenvolvimento
 
 ### Pré-requisitos
 
-- Node.js (v22.x ou superior)
+- Node.js (v20.x ou superior)
 - pnpm (v9.x ou superior)
 - Python (v3.11 ou superior)
 - Docker e Docker Compose
@@ -138,7 +139,7 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 
 -   **Frontend**: Disponível em `http://localhost:5173`
 -   **Backend API**: Disponível em `http://localhost:3001`
--   **Workers**: PDF e Analysis workers prontos para consumir jobs da fila Redis.
+-   **Workers**: PDF, Analysis e DOCX workers prontos para consumir jobs da fila Redis.
 
 ## Status do Desenvolvimento
 
@@ -151,10 +152,11 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 | **Fase 3** | ✅ Concluída | Frontend (React 19 + Vite 6 + Tailwind 4 + shadcn/ui), Dashboard, HITL review UI, 28 testes web |
 | **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Railway) |
 | **Hardening** | ✅ Concluída | 23 tasks: segurança, build/deploy, async pipeline, API robustness, frontend fixes |
+| **v2.6.0** | ✅ Concluída | DOCX worker, export polling, document detail endpoint, quality fixes |
 
 ### Métricas Atuais
-- **223 testes** passando (75 AI + 38 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 3 Analysis Worker)
-- **11 test suites** across 7 packages
+- **225 testes** passando (75 AI + 38 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 3 Analysis Worker + 2 DOCX Worker)
+- **12 test suites** across 8 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d
 - **4 CI/CD workflows** (CI, deploy-staging, deploy-production, integration)
