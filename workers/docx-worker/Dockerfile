@@ -23,8 +23,8 @@ COPY packages/core/ packages/core/
 COPY packages/db/ packages/db/
 COPY packages/tools/ packages/tools/
 
-# Build workspace packages (core, db, tools compile to dist/)
-RUN pnpm build
+# Build only docx-worker and its workspace deps (core, db, tools)
+RUN pnpm --filter @kratos/docx-worker... build
 
 # ─── Stage 3: Production image ───────────────────────────────────
 FROM node:22-slim AS prod
