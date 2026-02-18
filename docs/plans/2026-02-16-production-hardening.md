@@ -465,7 +465,7 @@ Docker image ~60% smaller."
 
 ---
 
-### Task 7: SIGTERM Graceful Shutdown Handler
+### Task 7: SIGTERM Graceful Shutdown Handler ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/index.ts:79-91`
@@ -582,7 +582,7 @@ PDF Worker: sets shutdown flag, finishes current job, exits cleanly."
 
 ---
 
-### Task 8: Structured Pino Logging
+### Task 8: Structured Pino Logging ✅ DONE
 
 **Files:**
 - Create: `apps/api/src/lib/logger.ts`
@@ -649,7 +649,7 @@ method, path, status, and duration for every request."
 
 ---
 
-### Task 9: Remove Stale fly.toml
+### Task 9: Remove Stale fly.toml ✅ DONE
 
 **Step 1: Delete fly.toml**
 
@@ -663,7 +663,7 @@ git commit -m "chore: remove stale fly.toml — deploying to Railway"
 
 ## Sprint 3: Async Analysis Pipeline
 
-### Task 10: Analysis Queue Infrastructure
+### Task 10: Analysis Queue Infrastructure ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/services/queue.ts` (add analysis queue)
@@ -702,7 +702,7 @@ git commit -m "feat(queue): add analysis job queue (kratos:jobs:analysis)"
 
 ---
 
-### Task 11: Refactor POST /analyze to Async
+### Task 11: Refactor POST /analyze to Async ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/routes/documents.ts:106-169`
@@ -772,7 +772,7 @@ analysis-worker. Client polls GET /documents/:id for completion."
 
 ---
 
-### Task 12: Create Analysis Worker Service
+### Task 12: Create Analysis Worker Service ✅ DONE
 
 **Files:**
 - Create: `workers/analysis-worker/package.json`
@@ -1065,7 +1065,7 @@ handles SIGTERM gracefully."
 
 ## Sprint 4: API & Database Robustness
 
-### Task 13: Zod Validation on Query Parameters
+### Task 13: Zod Validation on Query Parameters ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/routes/documents.ts:20-25`
@@ -1113,7 +1113,7 @@ Prevents NaN offset from invalid params. Bounds limit to 1-100."
 
 ---
 
-### Task 14: Consistent Error Response Format
+### Task 14: Consistent Error Response Format ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/index.ts:72-75`
@@ -1139,7 +1139,7 @@ git commit -m "fix(api): consistent error response format { error: { message } }
 
 ---
 
-### Task 15: Database Connection Pool Limits
+### Task 15: Database Connection Pool Limits ✅ DONE
 
 **Files:**
 - Modify: `packages/db/src/client.ts:24`
@@ -1163,7 +1163,7 @@ git commit -m "fix(db): configure connection pool limits (max=5, idle=20s)"
 
 ---
 
-### Task 16: LLM JSON.parse Hardening
+### Task 16: LLM JSON.parse Hardening ✅ DONE
 
 **Files:**
 - Create: `packages/ai/src/utils/parse-llm-json.ts`
@@ -1265,7 +1265,7 @@ response formatting variations."
 
 ---
 
-### Task 17: RAG Error Logging
+### Task 17: RAG Error Logging ✅ DONE
 
 **Files:**
 - Modify: `packages/ai/src/graph/nodes/rag.ts:75-84`
@@ -1292,7 +1292,7 @@ git commit -m "fix(ai): log RAG errors instead of silently swallowing"
 
 ---
 
-### Task 18: Generate Drizzle Baseline Migration
+### Task 18: Generate Drizzle Baseline Migration ✅ DONE
 
 **Step 1: Generate migration**
 
@@ -1323,7 +1323,7 @@ git commit -m "feat(db): generate Drizzle baseline migration from current schema
 
 ---
 
-### Task 19: Redis Error Recovery Config
+### Task 19: Redis Error Recovery Config ✅ DONE (covered by Task 10)
 
 **Files:**
 - Modify: `apps/api/src/services/queue.ts:3-5`
@@ -1355,7 +1355,7 @@ exponential backoff on reconnect."
 
 ---
 
-### Task 20: X-Request-ID Middleware
+### Task 20: X-Request-ID Middleware ✅ DONE
 
 **Files:**
 - Modify: `apps/api/src/index.ts` (add middleware)
@@ -1385,7 +1385,7 @@ git commit -m "feat(api): add X-Request-ID middleware for log correlation"
 
 ## Sprint 5: Frontend Fixes
 
-### Task 21: Fix API Base URL for Vercel
+### Task 21: Fix API Base URL for Vercel ✅ DONE
 
 **Files:**
 - Modify: `apps/web/src/lib/api.ts:3`
@@ -1414,7 +1414,7 @@ hits Vercel's server instead of Railway API."
 
 ---
 
-### Task 22: React Error Boundary
+### Task 22: React Error Boundary ✅ DONE
 
 **Files:**
 - Create: `apps/web/src/components/ErrorBoundary.tsx`
@@ -1483,7 +1483,7 @@ git commit -m "feat(web): add React error boundary for crash recovery"
 
 ---
 
-### Task 23: Auth Token Refresh
+### Task 23: Auth Token Refresh ✅ DONE
 
 **Files:**
 - Modify: `apps/web/src/lib/api.ts:5-7`
