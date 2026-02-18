@@ -1,12 +1,21 @@
 import { supabase } from './supabase';
 
-const BASE = '/v2';
+const BASE = import.meta.env.VITE_API_BASE_URL || '/v2';
 
 async function fetchWithAuth(path: string, init?: RequestInit) {
-  const { data: { session } } = await supabase.auth.getSession();
+  // getSession returns cached token; refreshSession handles expiry
+  let { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    const { data } = await supabase.auth.refreshSession();
+    session = data.session;
+  }
+
+  if (!session) throw new Error('Not authenticated');
+
   const headers: HeadersInit = {
     ...init?.headers,
-    'Authorization': `Bearer ${session?.access_token || ''}`,
+    'Authorization': `Bearer ${session.access_token}`,
   };
   if (!(init?.body instanceof FormData)) {
     (headers as Record<string, string>)['Content-Type'] = 'application/json';
