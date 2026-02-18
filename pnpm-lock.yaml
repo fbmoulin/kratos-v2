@@ -392,7 +392,7 @@ importers:
         specifier: ^22.0.0
         version: 22.19.11
       execa:
-        specifier: ^9.0.0
+        specifier: ^9.6.1
         version: 9.6.1
       tsx:
         specifier: ^4.19.0

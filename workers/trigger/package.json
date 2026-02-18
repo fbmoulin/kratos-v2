@@ -11,18 +11,18 @@
   },
   "dependencies": {
     "@kratos/ai": "workspace:*",
+    "@kratos/core": "workspace:*",
     "@kratos/db": "workspace:*",
     "@kratos/tools": "workspace:*",
-    "@kratos/core": "workspace:*",
-    "@trigger.dev/sdk": "latest",
     "@supabase/supabase-js": "^2.49.1",
+    "@trigger.dev/sdk": "latest",
     "drizzle-orm": "^0.39.1",
+    "execa": "^9.6.1",
     "pino": "^9.6.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "execa": "^9.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
