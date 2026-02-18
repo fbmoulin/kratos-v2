@@ -1,6 +1,6 @@
 # KRATOS - Sistema de Automação Jurídica de Elite
 
-![Versão](https://img.shields.io/badge/version-2.4.0-blue)
+![Versão](https://img.shields.io/badge/version-2.5.0-blue)
 ![Status](https://img.shields.io/badge/status-beta-brightgreen)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/seu-usuario/kratos/ci.yml?branch=main)](https://github.com/seu-usuario/kratos/actions)
 [![Licença](https://img.shields.io/badge/license-MIT-green)](LICENSE)
