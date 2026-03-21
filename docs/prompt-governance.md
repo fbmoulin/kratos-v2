@@ -65,6 +65,21 @@ Every analysis record (`analyses` table) stores:
 
 This allows complete traceability from any analysis back to the exact prompt that generated it.
 
+## Integrity Validation
+
+Before running an analysis in production, the system validates prompt integrity by comparing the resolved prompt's SHA-256 hash against the stored hash in `prompt_versions`:
+
+```typescript
+const validation = await promptRepo.validate(promptKey);
+if (!validation.valid) {
+  throw new Error(validation.message); // blocks analysis
+}
+```
+
+This catches scenarios where prompt content was modified directly in the database without going through the proper lifecycle (`draft → approved → active`).
+
+The validation endpoint (`POST /v2/prompts/:key/validate`) also accepts an optional `expectedHash` for external tooling to verify prompt integrity.
+
 ## Contracts
 
 See `@kratos/core` for formal schemas:
