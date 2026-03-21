@@ -75,9 +75,11 @@ kratos-v2/
 
 ## 4. Worker Layer
 
-### 4.1 Trigger.dev Tasks (Primary)
+### 4.1 Trigger.dev Tasks (Official Pipeline)
 
 Trigger.dev SDK 4.3 provides durable, retryable background tasks with observability. Three tasks are registered:
+
+> **All production traffic flows through Trigger.dev tasks. There is no alternative production path.**
 
 | Task | File | Queue | Purpose |
 |------|------|-------|---------|
@@ -85,7 +87,17 @@ Trigger.dev SDK 4.3 provides durable, retryable background tasks with observabil
 | `analysis-job` | `workers/trigger/src/analysis.ts` | Trigger.dev managed | Runs LangGraph AI pipeline (supervisor → router → RAG → specialist → drafter) |
 | `docx-export` | `workers/trigger/src/docx.ts` | Trigger.dev managed | Generates DOCX via `@kratos/tools`, uploads to Supabase Storage |
 
-### 4.2 Redis BRPOP Workers (Fallback)
+**Extraction flow:**
+
+```
+Upload → validate PDF → Supabase Storage → documents (status: pending)
+  → Trigger.dev pdf-extraction → Python subprocess (execa) → extractions table
+  → documents (status: completed)
+```
+
+### 4.2 Redis BRPOP Workers (DEPRECATED)
+
+> These workers are deprecated and will be removed once Trigger.dev migration is fully validated. They exist only for environments without Trigger.dev access.
 
 For environments without Trigger.dev, Redis-based workers consume from named queues:
 
