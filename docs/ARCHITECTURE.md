@@ -169,9 +169,17 @@ supervisor → router → rag → specialist (FIRAC+) → drafter → complete
 - Filename sanitization (path traversal chars stripped, 200-char limit)
 - Zod validation on all query parameters (page, limit, status)
 - Consistent error format: `{ error: { message } }`
+- **SSRF Guard** — URL ingestion validates allowlist, blocks private IPs, enforces HTTPS, rejects redirects (see `SECURITY.md` §3.2.1)
 
-### 7.3 Compliance
-- **CNJ 615/2025** — Immutable audit trail via database triggers on `audit_logs`
+### 7.3 Prompt Governance
+- Prompt lifecycle: `draft → approved → active → rolled_back` (via `prompt_versions` table)
+- **No silent fallback in production** — resolver throws on DB failure instead of using hardcoded default
+- Provenance fields (`promptKey`, `promptVersion`, `promptHash`) persisted in every `analyses` record
+- Integrity validation before analysis execution in production
+- See `docs/prompt-governance.md` for full policy
+
+### 7.4 Compliance
+- **CNJ 615/2025** — Immutable audit trail via database triggers on `audit_logs`, prompt provenance in analysis audit entries
 - **LGPD** — Privacy-by-design: data anonymization in logs, retention policies, explicit consent
 
 ---

@@ -1,6 +1,6 @@
 # KRATOS - Sistema de Automação Jurídica de Elite
 
-![Versão](https://img.shields.io/badge/version-2.7.0-blue)
+![Versão](https://img.shields.io/badge/version-2.8.0-blue)
 ![Status](https://img.shields.io/badge/status-beta-brightgreen)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/seu-usuario/kratos/ci.yml?branch=main)](https://github.com/seu-usuario/kratos/actions)
 [![Licença](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -95,7 +95,7 @@ Siga estas instruções para configurar e executar o ambiente de desenvolvimento
 - Docker e Docker Compose
 - Uma conta no Supabase para o banco de dados PostgreSQL.
 - Chaves de API para os serviços de IA (Anthropic, Google AI, OpenAI) e LangSmith.
-- (Opcional) Python 3.11+ — necessario apenas para executar o `pdf-worker` legado diretamente.
+- Python 3.11+ — necessário para o subprocess de extração de PDF (`workers/trigger/extraction/`).
 
 ### Instalação
 
@@ -140,7 +140,7 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 
 -   **Frontend**: Disponível em `http://localhost:5173`
 -   **Backend API**: Disponível em `http://localhost:3001`
--   **Workers**: PDF, Analysis e DOCX workers prontos para consumir jobs da fila Redis.
+-   **Workers**: Trigger.dev tasks (PDF, Analysis, DOCX) processam jobs em background. Workers BRPOP/Redis disponíveis como fallback local.
 
 ## Status do Desenvolvimento
 
@@ -155,9 +155,10 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 | **Hardening** | ✅ Concluída | 23 tasks: segurança, build/deploy, async pipeline, API robustness, frontend fixes |
 | **v2.6.0** | ✅ Concluída | Trigger.dev migration, DOCX export, document detail endpoint, quality fixes |
 | **v2.7.0** | ✅ Concluída | Release readiness (review/export tests, HITL audit trail) + Lex adapter (ingestion contract) |
+| **v2.8.0** | ✅ Concluída | Beta institucional: extração desacoplada, governança de prompts, SSRF guard, docs convergentes |
 
 ### Métricas Atuais
-- **283 testes** passando (87 AI + 61 API + 34 Web + 31 DB + 31 Core + 24 PDF Worker + 10 Trigger + 3 Analysis Worker + 2 DOCX Worker)
+- **290+ testes** passando (90 AI + 75 API + 34 Web + 31 DB + 37 Core + 10 Trigger + 14 URL Validator)
 - **48 test suites** across 9 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d

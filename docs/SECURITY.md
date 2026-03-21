@@ -1,7 +1,7 @@
 # Política de Segurança — KRATOS v2
 
-**Versão**: 1.0
-**Data**: 14 de Fevereiro de 2026
+**Versão**: 2.0
+**Data**: 21 de Março de 2026
 
 ---
 
@@ -62,6 +62,17 @@ A rota `/v2/ingest` aceita URLs para download de PDFs. Para prevenir ataques SSR
 
 - **Versionamento de Prompts**: Todos os prompts utilizados para guiar os modelos de IA são versionados e armazenados no banco de dados (`prompt_versions`). Isso permite um controle de qualidade rigoroso e a capacidade de reverter para versões anteriores caso uma nova versão introduza comportamentos indesejados.
 - **Roteamento Inteligente e Controle de Custos**: Utilizamos o **OpenRouter** para rotear tarefas para os modelos de IA mais apropriados, balanceando custo e performance. Implementamos *budget caps* e monitoramento de custos para prevenir o uso descontrolado de APIs.
+
+### 3.5. Governança de Prompts (v2.8.0)
+
+Os prompts de IA seguem um ciclo de vida controlado (`draft → approved → active → rolled_back`) para garantir rastreabilidade e integridade.
+
+- **Sem fallback silencioso em produção**: Se o prompt ativo não for encontrado no banco de dados em `production`/`staging`, o sistema lança uma exceção controlada em vez de usar um prompt hardcoded. Isso previne *prompt drift* não detectado.
+- **Proveniência em cada análise**: Toda análise registra `promptKey`, `promptVersion` e `promptHash` (SHA-256) na tabela `analyses`, permitindo rastreabilidade completa de qual prompt gerou qual resultado.
+- **Validação de integridade**: Antes de executar uma análise em produção, o hash do prompt resolvido é comparado com o hash armazenado na tabela `prompt_versions`. Discrepâncias bloqueiam a análise.
+- **Audit log**: Cada análise concluída gera um registro em `audit_logs` com a proveniência completa do prompt utilizado.
+
+Para detalhes completos, consulte `docs/prompt-governance.md`.
 
 ## 4. Gerenciamento de Segredos (Secret Management)
 

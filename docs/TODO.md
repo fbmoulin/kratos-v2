@@ -152,6 +152,42 @@ All 23 tasks completed per CHANGELOG v2.5.0:
 
 ---
 
+## v2.8.0: Beta Institucional Roadmap (2026-03-21) — DONE
+
+### Fase A: Separação da extração legada — DONE
+- [x] Migração do código Python de extração para `workers/trigger/extraction/` (pacote self-contained)
+- [x] `pdf_runner.py` importa de `extraction.pipeline` (sem dependência de `workers/pdf-worker/`)
+- [x] `workers/pdf-worker/` marcado como safe-to-delete (DEPRECATED.md atualizado)
+- [x] `requirements.txt` adicionado em `workers/trigger/`
+
+### Fase B: Deduplicação simétrica — DONE (já implementado)
+- [x] Dedup por hash na rota `/v2/ingest` (base64 e URL)
+- [x] Dedup por hash na rota `/v2/documents` (upload multipart)
+- [x] `idempotencyKey` no Trigger.dev para extração
+
+### Fase C: Governança de prompts — DONE
+- [x] Prompt resolver sem fallback silencioso em produção (throws on failure)
+- [x] Proveniência persistida em `analyses`: `promptKey`, `promptVersion`, `promptHash`
+- [x] Validação de integridade do prompt antes da análise (`promptRepo.validate()`)
+- [x] Audit log com proveniência completa em cada análise concluída
+- [x] Documentação em `docs/prompt-governance.md`
+
+### Fase D: SSRF Guard na ingestão por URL — DONE (já implementado)
+- [x] `url-validator.ts`: allowlist, bloqueio de IPs privados, HTTPS obrigatório, sem credenciais
+- [x] `ingestion.ts`: validação antes do fetch, `redirect: 'error'`, Content-Type/Length check
+- [x] `.env.example` com `URL_INGESTION_ALLOWLIST`
+- [x] Documentação em `SECURITY.md` seção 3.2.1
+- [x] 14 testes de URL validation
+
+### Fase E: Convergência documental — DONE
+- [x] README.md atualizado (v2.8.0, métricas, Trigger.dev como pipeline oficial)
+- [x] ARCHITECTURE.md v2.8.0 (nota sobre extraction package, LangSmith implementado)
+- [x] SECURITY.md v2.0 (seção 3.5 Governança de Prompts)
+- [x] TODO.md reconciliado (LangSmith done, fases v2.8.0 marcadas)
+- [x] Checklist go/no-go em `docs/release/checklist.md`
+
+---
+
 ## Post-MVP (Enterprise)
 
 - [ ] Full PDF pipeline (Docling + pdfplumber + Gemini Vision)
