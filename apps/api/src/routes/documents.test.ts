@@ -521,4 +521,240 @@ describe('Document routes', () => {
     const body = await res.json();
     expect(body.error.message).toContain('Extraction not available');
   });
+
+  // ---- PUT /:id/review ----
+
+  describe('PUT /:id/review', () => {
+    const completedDoc = {
+      id: 'doc-1',
+      userId: 'test-user-id',
+      status: 'completed',
+      fileName: 'test.pdf',
+      filePath: 'path',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      pages: 5,
+      errorMessage: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    test('PUT /v2/documents/doc-1/review with approved action → status becomes reviewed', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      const { auditRepo } = await import('../services/audit-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(completedDoc);
+      vi.mocked(documentRepo.updateStatus).mockResolvedValueOnce({ ...completedDoc, status: 'reviewed' });
+
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approved', comments: '' }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data.status).toBe('reviewed');
+      expect(vi.mocked(documentRepo.updateStatus)).toHaveBeenCalledWith('test-user-id', 'doc-1', 'reviewed');
+      expect(vi.mocked(auditRepo.create)).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'review:approved' }),
+      );
+    });
+
+    test('PUT /v2/documents/doc-1/review with revised action stores reviewedDraft', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      const { analysisRepo } = await import('../services/analysis-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(completedDoc);
+      vi.mocked(documentRepo.updateStatus).mockResolvedValueOnce({ ...completedDoc, status: 'reviewed' });
+      vi.mocked(documentRepo.getExtraction).mockResolvedValueOnce({
+        id: 'ext-1',
+        documentId: 'doc-1',
+        contentJson: { text: 'content' },
+        extractionMethod: 'pdfplumber',
+        rawText: 'raw',
+        tablesCount: 0,
+        imagesCount: 0,
+        createdAt: new Date(),
+      });
+      vi.mocked(analysisRepo.getByExtractionId).mockResolvedValueOnce({
+        id: 'ana-1',
+        extractionId: 'ext-1',
+        agentChain: 'chain',
+        resultJson: {},
+        modelUsed: 'claude-sonnet-4-5-20250929',
+        tokensInput: 100,
+        tokensOutput: 50,
+        latencyMs: 1000,
+        createdAt: new Date(),
+      });
+
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revised', comments: 'edited', revisedContent: { draft: 'new draft text' } }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(vi.mocked(analysisRepo.updateResultJson)).toHaveBeenCalledWith(
+        'ana-1',
+        expect.objectContaining({ reviewedDraft: 'new draft text' }),
+      );
+    });
+
+    test('PUT /v2/documents/doc-1/review with rejected action → status reverts to pending', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(completedDoc);
+      vi.mocked(documentRepo.updateStatus).mockResolvedValueOnce({ ...completedDoc, status: 'pending' });
+
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'rejected', comments: 'needs rework' }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data.status).toBe('pending');
+      expect(vi.mocked(documentRepo.updateStatus)).toHaveBeenCalledWith('test-user-id', 'doc-1', 'pending');
+    });
+
+    test('PUT /v2/documents/doc-1/review with invalid action → 400', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(completedDoc);
+
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invalid_action' }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    test('PUT /v2/documents/doc-1/review on non-completed doc → 400', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce({ ...completedDoc, status: 'pending' });
+
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approved' }),
+      });
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error.message).toContain('completed');
+    });
+
+    test('PUT /v2/documents/doc-1/review creates audit log', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      const { auditRepo } = await import('../services/audit-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(completedDoc);
+      vi.mocked(documentRepo.updateStatus).mockResolvedValueOnce({ ...completedDoc, status: 'reviewed' });
+
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approved', comments: 'looks good' }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(vi.mocked(auditRepo.create)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'document',
+          entityId: 'doc-1',
+          action: 'review:approved',
+        }),
+      );
+    });
+  });
+
+  // ---- Export routes ----
+
+  describe('Export routes', () => {
+    const reviewedDoc = {
+      id: 'doc-1',
+      userId: 'test-user-id',
+      status: 'reviewed',
+      fileName: 'test.pdf',
+      filePath: 'path',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      pages: 5,
+      errorMessage: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    test('POST /v2/documents/doc-1/export enqueues docx-export task', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      const { triggerService } = await import('../services/trigger.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(reviewedDoc);
+
+      const res = await app.request('/v2/documents/doc-1/export', {
+        method: 'POST',
+        headers: authHeader,
+      });
+
+      expect(res.status).toBe(200);
+      expect(vi.mocked(triggerService.enqueueDocxExport)).toHaveBeenCalledWith({
+        documentId: 'doc-1',
+        userId: 'test-user-id',
+        fileName: 'test.docx',
+      });
+    });
+
+    test('POST /v2/documents/doc-1/export on non-reviewed doc → 400', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce({ ...reviewedDoc, status: 'completed' });
+
+      const res = await app.request('/v2/documents/doc-1/export', {
+        method: 'POST',
+        headers: authHeader,
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    test('POST /v2/documents/doc-1/export creates audit log', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      const { auditRepo } = await import('../services/audit-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(reviewedDoc);
+
+      const res = await app.request('/v2/documents/doc-1/export', {
+        method: 'POST',
+        headers: authHeader,
+      });
+
+      expect(res.status).toBe(200);
+      expect(vi.mocked(auditRepo.create)).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'export:docx' }),
+      );
+    });
+
+    test('GET /v2/documents/doc-1/export returns signed URL', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(reviewedDoc);
+
+      const res = await app.request('/v2/documents/doc-1/export', {
+        headers: authHeader,
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data.url).toBe('https://signed-url');
+    });
+
+    test('GET /v2/documents/doc-1/export returns 404 when DOCX not ready', async () => {
+      const { documentRepo } = await import('../services/document-repo.js');
+      const { storageService } = await import('../services/storage.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(reviewedDoc);
+      vi.mocked(storageService.getSignedUrl).mockRejectedValueOnce(new Error('not found'));
+
+      const res = await app.request('/v2/documents/doc-1/export', {
+        headers: authHeader,
+      });
+
+      expect(res.status).toBe(404);
+    });
+  });
 });

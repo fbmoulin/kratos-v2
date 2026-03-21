@@ -205,6 +205,19 @@ async function main() {
     assert(result.tokensOutput > 0, `Tokens out: ${result.tokensOutput}`);
   }
 
+  // ─── STAGE 5: Review Document ───────────────────────────────────────────
+  console.log('\n── Stage 5: Review Document ──');
+  const review = await api<{ data: any }>('PUT', `/v2/documents/${docId}/review`,
+    JSON.stringify({ action: 'approved', comments: 'E2E auto-approved' }));
+  assert(review.status === 200, `Review returned ${review.status}`);
+  console.log('  Document reviewed and approved');
+
+  // ─── STAGE 6: Export DOCX ──────────────────────────────────────────────
+  console.log('\n── Stage 6: Export DOCX ──');
+  const exportReq = await api<{ data: any }>('POST', `/v2/documents/${docId}/export`);
+  assert(exportReq.status === 200, `Export enqueue returned ${exportReq.status}`);
+  console.log('  DOCX export queued');
+
   // ─── Summary ───────────────────────────────────────────────────────────
   const totalMs = Date.now() - pollStart;
   console.log('\n' + '='.repeat(60));
