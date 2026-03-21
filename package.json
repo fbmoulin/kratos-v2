@@ -14,7 +14,8 @@
     "seed": "tsx scripts/seed-precedents.ts",
     "e2e": "tsx scripts/test-e2e-full.ts",
     "e2e:playwright": "playwright test --config e2e/playwright.config.ts",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "benchmark": "tsx scripts/benchmark-extraction.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -33,5 +34,8 @@
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@9.15.0",
+  "dependencies": {
+    "@trigger.dev/sdk": "^4.3.3"
+  }
 }

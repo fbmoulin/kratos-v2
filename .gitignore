@@ -56,6 +56,10 @@ docker-compose.override.yml
 supabase/.temp/
 supabase/.branches/
 
+# Benchmark output (generated, not committed)
+scripts/benchmark-results.json
+scripts/benchmark-report.md
+
 # Misc
 *.tsbuildinfo
 .worktrees
