@@ -3,6 +3,10 @@ import { LegalMatter, DecisionType, AIModel } from '@kratos/core';
 import type { AgentStateType } from '../state.js';
 import { createInitialState } from '../state.js';
 
+vi.mock('../../prompts/prompt-resolver.js', () => ({
+  resolvePrompt: vi.fn((_key: string, fallback: string) => Promise.resolve(fallback)),
+}));
+
 // Mock providers
 vi.mock('../../providers/anthropic.js', () => ({
   createAnthropicModel: vi.fn().mockReturnValue({
@@ -53,12 +57,26 @@ describe('drafterNode', () => {
   }
 
   test('produces draftResult from specialist prompt + XML input', async () => {
+    const { createAnthropicModel } = await import('../../providers/anthropic.js');
     const state = makeState();
     const result = await drafterNode(state);
 
     expect(result.draftResult).toBeDefined();
     expect(result.draftResult).toContain('RELATORIO');
     expect(result.currentStep).toBe('complete');
+
+    // Verify tracing config is passed to model.invoke
+    const mockModel = vi.mocked(createAnthropicModel).mock.results[0]?.value;
+    expect(mockModel.invoke).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        runName: 'kratos-drafter',
+        metadata: expect.objectContaining({
+          node: 'drafter',
+          legalMatter: LegalMatter.CIVIL,
+        }),
+      }),
+    );
   });
 
   test('tracks token usage and latency', async () => {

@@ -1,6 +1,10 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { LegalMatter, DecisionType, AIModel } from '@kratos/core';
 
+vi.mock('../../prompts/prompt-resolver.js', () => ({
+  resolvePrompt: vi.fn((_key: string, fallback: string) => Promise.resolve(fallback)),
+}));
+
 vi.mock('@langchain/google-genai', () => ({
   ChatGoogleGenerativeAI: vi.fn().mockImplementation(() => ({
     invoke: vi.fn(),
@@ -50,6 +54,15 @@ describe('routerNode', () => {
     expect(result.routerResult!.complexity).toBeGreaterThanOrEqual(0);
     expect(result.routerResult!.complexity).toBeLessThanOrEqual(100);
     expect(result.currentStep).toBe('rag');
+
+    // Verify tracing config is passed to model.invoke
+    expect(mockInvoke).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        runName: 'kratos-router',
+        metadata: expect.objectContaining({ node: 'router' }),
+      }),
+    );
   });
 
   test('updates currentStep to rag after successful classification', async () => {

@@ -1,6 +1,6 @@
 import Redis from 'ioredis';
 import pino from 'pino';
-import { createAnalysisWorkflow, createInitialState } from '@kratos/ai';
+import { createAnalysisWorkflow, createInitialState, buildTracingConfig } from '@kratos/ai';
 import { db, analyses, documents } from '@kratos/db';
 import { eq } from 'drizzle-orm';
 
@@ -71,9 +71,15 @@ export async function processAnalysisJob(job: AnalysisJob) {
       rawText: job.rawText,
     });
 
+    const tracingConfig = buildTracingConfig('analysis-pipeline', {
+      extractionId: job.extractionId,
+      documentId: job.documentId,
+      userId: job.userId,
+    });
+
     // Race against timeout
     const finalState = await Promise.race([
-      workflow.invoke(initialState),
+      workflow.invoke(initialState, tracingConfig),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Analysis timeout (4.5min)')), TIMEOUT_MS)
       ),

@@ -32,3 +32,11 @@ export { createGoogleModel } from './providers/google.js';
 export { buildRouterPrompt, buildSpecialistPrompt, type SpecialistPromptInput } from './prompts/templates.js';
 export { buildFiracEnterprisePrompt, type FiracEnterpriseInput } from './prompts/firac-enterprise.js';
 export { buildDrafterXml, getDomainPrompt, DOMAIN_MAP, type DrafterXmlInput } from './prompts/drafter.js';
+
+// Prompt Governance
+export { promptRepo } from './prompts/prompt-repo.js';
+export { resolvePrompt, clearPromptCache } from './prompts/prompt-resolver.js';
+export { PROMPT_KEYS, type PromptKey } from './prompts/prompt-keys.js';
+
+// Tracing
+export { buildTracingConfig, type TracingContext } from './utils/tracing.js';

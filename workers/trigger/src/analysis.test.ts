@@ -13,6 +13,7 @@ vi.mock("@kratos/ai", () => ({
     }),
   })),
   createInitialState: vi.fn((opts) => opts),
+  buildTracingConfig: vi.fn(() => ({ runName: "kratos-analysis-pipeline", metadata: {}, tags: [] })),
 }));
 
 vi.mock("@kratos/db", () => ({
@@ -48,7 +49,8 @@ describe("runAnalysisJob", () => {
 
     const mockWorkflow = (createAnalysisWorkflow as ReturnType<typeof vi.fn>).mock.results[0].value;
     expect(mockWorkflow.invoke).toHaveBeenCalledWith(
-      expect.objectContaining({ documentId: payload.documentId, rawText: payload.rawText })
+      expect.objectContaining({ documentId: payload.documentId, rawText: payload.rawText }),
+      expect.objectContaining({ runName: 'kratos-analysis-pipeline' }),
     );
   });
 

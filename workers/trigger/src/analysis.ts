@@ -1,6 +1,6 @@
 import { schemaTask } from "@trigger.dev/sdk/v3";
 import { z } from "zod";
-import { createAnalysisWorkflow, createInitialState } from "@kratos/ai";
+import { createAnalysisWorkflow, createInitialState, buildTracingConfig } from "@kratos/ai";
 import { db, analyses, documents } from "@kratos/db";
 import { eq } from "drizzle-orm";
 import pino from "pino";
@@ -24,8 +24,13 @@ export async function runAnalysisJob(payload: AnalysisPayload): Promise<void> {
   try {
     const workflow = createAnalysisWorkflow();
     const initialState = createInitialState({ extractionId, documentId, userId, rawText });
+    const tracingConfig = buildTracingConfig('analysis-pipeline', {
+      extractionId,
+      documentId,
+      userId,
+    });
 
-    const finalState = await workflow.invoke(initialState);
+    const finalState = await workflow.invoke(initialState, tracingConfig);
     const latencyMs = Date.now() - startMs;
 
     await db.insert(analyses).values({

@@ -1,6 +1,10 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { LegalMatter, DecisionType, AIModel } from '@kratos/core';
 
+vi.mock('../../prompts/prompt-resolver.js', () => ({
+  resolvePrompt: vi.fn((_key: string, fallback: string) => Promise.resolve(fallback)),
+}));
+
 vi.mock('@langchain/anthropic', () => ({
   ChatAnthropic: vi.fn().mockImplementation(() => ({
     invoke: vi.fn(),
@@ -78,6 +82,18 @@ describe('specialistNode', () => {
     expect(result.tokensInput).toBe(1500);
     expect(result.tokensOutput).toBe(800);
     expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+
+    // Verify tracing config is passed to model.invoke
+    expect(mockInvoke).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        runName: 'kratos-specialist',
+        metadata: expect.objectContaining({
+          node: 'specialist',
+          legalMatter: LegalMatter.CIVIL,
+        }),
+      }),
+    );
   });
 
   test('returns error state when LLM call fails', async () => {

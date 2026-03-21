@@ -3,6 +3,7 @@ import type { AgentStateType } from '../state.js';
 import { createAnthropicModel } from '../../providers/anthropic.js';
 import { selectModel } from '../../router/model-router.js';
 import { buildDrafterXml, getDomainPrompt } from '../../prompts/drafter.js';
+import { buildTracingConfig } from '../../utils/tracing.js';
 
 /**
  * Drafter agent node — generates minuta (draft decision/sentence)
@@ -34,7 +35,7 @@ export async function drafterNode(
     });
 
     // Select domain-specific specialist prompt
-    const systemPrompt = getDomainPrompt(routerResult.legalMatter);
+    const systemPrompt = await getDomainPrompt(routerResult.legalMatter);
 
     // Build XML <case> input with full context
     const xmlInput = buildDrafterXml({
@@ -43,11 +44,21 @@ export async function drafterNode(
       ragContext: state.ragContext,
     });
 
+    const tracingConfig = buildTracingConfig('drafter', {
+      extractionId: state.extractionId,
+      documentId: state.documentId,
+      userId: state.userId,
+    }, {
+      model: modelEnum,
+      legalMatter: routerResult.legalMatter,
+      complexity: routerResult.complexity,
+    });
+
     // Invoke model with system prompt + XML input
     const response = await model.invoke([
       { role: 'system', content: systemPrompt },
       { role: 'human', content: xmlInput },
-    ]) as AIMessage;
+    ], tracingConfig) as AIMessage;
 
     const draftResult = typeof response.content === 'string'
       ? response.content

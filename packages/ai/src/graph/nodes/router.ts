@@ -5,6 +5,7 @@ import { createGoogleModel } from '../../providers/google.js';
 import { buildRouterPrompt } from '../../prompts/templates.js';
 import { classifyComplexity, selectModel } from '../../router/model-router.js';
 import { parseLlmJson } from '../../utils/parse-llm-json.js';
+import { buildTracingConfig } from '../../utils/tracing.js';
 
 const VALID_LEGAL_MATTERS = new Set(Object.values(LegalMatter));
 const VALID_DECISION_TYPES = new Set(Object.values(DecisionType));
@@ -20,8 +21,13 @@ export async function routerNode(
 ): Promise<Partial<AgentStateType>> {
   try {
     const model = createGoogleModel(AIModel.GEMINI_FLASH);
-    const prompt = buildRouterPrompt(state.rawText);
-    const response = await model.invoke(prompt);
+    const prompt = await buildRouterPrompt(state.rawText);
+    const tracingConfig = buildTracingConfig('router', {
+      extractionId: state.extractionId,
+      documentId: state.documentId,
+      userId: state.userId,
+    });
+    const response = await model.invoke(prompt, tracingConfig);
 
     const content = typeof response.content === 'string'
       ? response.content

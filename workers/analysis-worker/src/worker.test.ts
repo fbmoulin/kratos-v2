@@ -35,6 +35,7 @@ vi.mock('@kratos/ai', () => ({
     latencyMs: 0,
     error: null,
   })),
+  buildTracingConfig: vi.fn(() => ({ runName: 'kratos-analysis-pipeline', metadata: {}, tags: [] })),
 }));
 
 // Mock @kratos/db

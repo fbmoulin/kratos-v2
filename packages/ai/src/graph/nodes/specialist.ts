@@ -6,6 +6,7 @@ import { createAnthropicModel } from '../../providers/anthropic.js';
 import { buildFiracEnterprisePrompt } from '../../prompts/firac-enterprise.js';
 import { selectModel } from '../../router/model-router.js';
 import { parseLlmJson } from '../../utils/parse-llm-json.js';
+import { buildTracingConfig } from '../../utils/tracing.js';
 
 /**
  * Specialist agent node — generates FIRAC analysis using Claude.
@@ -34,14 +35,23 @@ export async function specialistNode(
       .map((r) => r.content)
       .join('\n\n') || undefined;
 
-    const prompt = buildFiracEnterprisePrompt({
+    const prompt = await buildFiracEnterprisePrompt({
       rawText: state.rawText,
       legalMatter: routerResult.legalMatter,
       decisionType: routerResult.decisionType,
       ragContext: ragText,
     });
 
-    const response = await model.invoke(prompt) as AIMessage;
+    const tracingConfig = buildTracingConfig('specialist', {
+      extractionId: state.extractionId,
+      documentId: state.documentId,
+      userId: state.userId,
+    }, {
+      model: modelId,
+      legalMatter: routerResult.legalMatter,
+      complexity: routerResult.complexity,
+    });
+    const response = await model.invoke(prompt, tracingConfig) as AIMessage;
 
     const content = typeof response.content === 'string'
       ? response.content
