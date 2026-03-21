@@ -23,8 +23,8 @@
 - [x] Drizzle schema (8 tabelas + pgvector)
 - [x] Schema applied via Supabase MCP migration
 - [x] CI workflow (ci.yml — lint, typecheck, test)
-- [ ] Audit log triggers SQL — **moved to Sprint 1 Compliance (Task 5)**
-- [ ] HNSW index for precedents.embedding — **moved to Sprint 1 Compliance (Task 6)**
+- [x] Audit log triggers SQL — completed in Sprint 1 Compliance (Task 5)
+- [x] HNSW index for precedents.embedding — completed in Sprint 1 Compliance (Task 6)
 
 ---
 
@@ -134,12 +134,12 @@ All 23 tasks completed per CHANGELOG v2.5.0:
 
 ---
 
-## Sprint 1 Compliance (Current — 2026-03-21)
+## Sprint 1 Compliance (2026-03-21) — DONE
 
-- [ ] **Task 5:** Audit log triggers on documents, extractions, analyses (CNJ 615/2025)
-- [ ] **Task 6:** HNSW index on precedents.embedding + graph_entities.embedding
-- [ ] **Task 7:** RLS policies on documents, extractions, analyses (user_id isolation)
-- [ ] **Task 8:** Deprecate legacy pdf-worker, run final test suite
+- [x] **Task 5:** Audit log triggers on documents, extractions, analyses (CNJ 615/2025)
+- [x] **Task 6:** HNSW index on precedents.embedding + graph_entities.embedding
+- [x] **Task 7:** RLS policies on documents, extractions, analyses (user_id isolation)
+- [x] **Task 8:** Deprecate legacy pdf-worker, run final test suite
 
 ---
 
