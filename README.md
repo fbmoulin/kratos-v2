@@ -33,7 +33,7 @@ O sistema é projetado para ser escalável, seguro e eficiente, utilizando as te
 
 ## Principais Funcionalidades
 
-- **Pipeline de Extração Híbrida**: Utiliza Docling (IBM), pdfplumber e Gemini 2.5 Flash para extrair texto, tabelas e imagens de PDFs com alta precisão.
+- **Pipeline de Extração de PDF**: Extrai texto e tabelas de PDFs judiciais via Trigger.dev background tasks (Python subprocess). _Integração completa com Docling/Gemini Vision planejada para post-MVP._
 - **Orquestração de Agentes com LangGraph**: Modela o fluxo de análise jurídica como um grafo de agentes especializados (Supervisor, Roteador, Especialista), garantindo um processo de decisão transparente e auditável.
 - **Retrieval-Augmented Generation (RAG)**: Utiliza `pgvector` para buscar precedentes jurídicos relevantes e injetá-los como few-shots nos prompts, especializando as respostas da IA sem a necessidade de fine-tuning.
 - **Human-in-the-Loop (HITL)**: Interface de revisão dedicada para que advogados possam validar, editar e aprovar cada minuta gerada, garantindo controle total sobre o resultado final.
@@ -51,8 +51,8 @@ O sistema é projetado para ser escalável, seguro e eficiente, utilizando as te
 | **Busca Vetorial** | pgvector | Indexação e busca de similaridade para o sistema RAG. |
 | **Orquestração de IA** | LangGraph | Modela e executa o fluxo de agentes de IA. |
 | **Tracing de IA** | LangSmith | Monitoramento e depuração das cadeias de agentes. |
-| **Processamento de PDF** | Docling, pdfplumber, Gemini 2.5 Flash | Pipeline híbrido para extração de dados de PDFs. |
-| **Fila de Jobs** | ioredis + Redis (BRPOP) | Processamento assíncrono de análises e extração de PDFs. |
+| **Processamento de PDF** | Trigger.dev tasks + Python subprocess | Extração assíncrona e durável de PDFs. |
+| **Fila de Jobs** | Trigger.dev SDK 4.3, ioredis + Redis (BRPOP fallback) | Background tasks com retry, observabilidade e durabilidade. |
 | **Autenticação** | Supabase Auth | Gerenciamento de usuários e segurança. |
 | **Deploy** | Vercel (Frontend), Railway (API + Workers + Redis) | Plataformas de deploy modernas, escaláveis e com excelente DX. |
 | **CI/CD** | GitHub Actions | Automação de testes e deploys. |
@@ -73,9 +73,10 @@ kratos/
 │   ├── ai/           # Configuração dos agentes LangGraph, prompts
 │   └── tools/        # Ferramentas utilitárias (ex: gerador de DOCX)
 ├── workers/
-│   ├── pdf-worker/       # Worker Python para extração de PDF
-│   ├── analysis-worker/  # Worker Node.js para pipeline LangGraph
-│   └── docx-worker/      # Worker Node.js para exportação DOCX
+│   ├── trigger/          # Trigger.dev tasks (pdf, analysis, docx) — PRIMARY
+│   ├── analysis-worker/  # Redis BRPOP worker (LangGraph pipeline fallback)
+│   ├── docx-worker/      # Redis BRPOP worker (DOCX export fallback)
+│   └── pdf-worker/       # [DEPRECATED] Legacy Python/Celery worker
 ├── .github/          # Workflows de CI/CD
 ├── docs/             # Documentação do projeto
 └── ...
@@ -91,10 +92,10 @@ Siga estas instruções para configurar e executar o ambiente de desenvolvimento
 
 - Node.js (v20.x ou superior)
 - pnpm (v9.x ou superior)
-- Python (v3.11 ou superior)
 - Docker e Docker Compose
 - Uma conta no Supabase para o banco de dados PostgreSQL.
-- Chaves de API para os serviços de IA (OpenRouter, Google AI, Anthropic) e LangSmith.
+- Chaves de API para os serviços de IA (Anthropic, Google AI, OpenAI) e LangSmith.
+- (Opcional) Python 3.11+ — only needed if running legacy `pdf-worker` directly.
 
 ### Instalação
 
@@ -152,11 +153,11 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 | **Fase 3** | ✅ Concluída | Frontend (React 19 + Vite 6 + Tailwind 4 + shadcn/ui), Dashboard, HITL review UI, 28 testes web |
 | **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Railway) |
 | **Hardening** | ✅ Concluída | 23 tasks: segurança, build/deploy, async pipeline, API robustness, frontend fixes |
-| **v2.6.0** | ✅ Concluída | DOCX worker, export polling, document detail endpoint, quality fixes |
+| **v2.6.0** | ✅ Concluída | Trigger.dev migration, DOCX export, document detail endpoint, quality fixes |
 
 ### Métricas Atuais
-- **225 testes** passando (75 AI + 38 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 3 Analysis Worker + 2 DOCX Worker)
-- **38 test suites** across 8 packages
+- **235 testes** passando (75 AI + 41 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 7 Trigger + 3 Analysis Worker + 2 DOCX Worker)
+- **45 test suites** across 9 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d
 - **4 CI/CD workflows** (CI, deploy-staging, deploy-production, integration)
