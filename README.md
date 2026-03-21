@@ -95,7 +95,7 @@ Siga estas instruções para configurar e executar o ambiente de desenvolvimento
 - Docker e Docker Compose
 - Uma conta no Supabase para o banco de dados PostgreSQL.
 - Chaves de API para os serviços de IA (Anthropic, Google AI, OpenAI) e LangSmith.
-- (Opcional) Python 3.11+ — only needed if running legacy `pdf-worker` directly.
+- (Opcional) Python 3.11+ — necessario apenas para executar o `pdf-worker` legado diretamente.
 
 ### Instalação
 

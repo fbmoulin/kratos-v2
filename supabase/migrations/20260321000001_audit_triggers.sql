@@ -1,6 +1,12 @@
 -- Audit log triggers for CNJ 615/2025 compliance
 -- Auto-insert into audit_logs on INSERT/UPDATE/DELETE of critical tables
 -- Ref: packages/db/src/schema/documents.ts (auditLogs table definition)
+--
+-- IMPORTANT: For user_id attribution, the API must call:
+--   SELECT set_config('app.current_user_id', '<uuid>', true)
+-- at the start of each request's database transaction. Without this,
+-- user_id will be NULL in audit rows (worker/system actions are NULL by design).
+-- See: apps/api/src/middleware/ for the integration point.
 
 -- Generic audit trigger function
 -- Uses TG_TABLE_NAME as entity_type and TG_OP as action.

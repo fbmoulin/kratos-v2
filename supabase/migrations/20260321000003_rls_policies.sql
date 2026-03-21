@@ -33,6 +33,8 @@ CREATE POLICY "users_delete_own_documents" ON documents
 
 -- ============================================================
 -- Extractions: ownership via parent document
+-- NOTE: Workers insert extractions using SUPABASE_SERVICE_ROLE_KEY,
+-- which bypasses RLS. These INSERT policies only apply to direct user connections.
 -- ============================================================
 
 CREATE POLICY "users_select_own_extractions" ON extractions
@@ -57,6 +59,8 @@ CREATE POLICY "users_delete_own_extractions" ON extractions
 
 -- ============================================================
 -- Analyses: ownership via extraction → document chain
+-- NOTE: Workers insert analyses using SUPABASE_SERVICE_ROLE_KEY,
+-- which bypasses RLS. These INSERT policies only apply to direct user connections.
 -- ============================================================
 
 CREATE POLICY "users_select_own_analyses" ON analyses
@@ -116,4 +120,24 @@ CREATE POLICY "authenticated_read_graph_entities" ON graph_entities
 ALTER TABLE graph_relations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "authenticated_read_graph_relations" ON graph_relations
+  FOR SELECT TO authenticated USING (true);
+
+-- ============================================================
+-- Audit logs: deny all for authenticated users (immutable compliance trail)
+-- The audit_trigger_fn uses SECURITY DEFINER to bypass RLS when inserting.
+-- Service role key also bypasses RLS for admin read access.
+-- No policies = deny all for authenticated role via PostgREST.
+-- ============================================================
+
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+-- Intentionally no policies: authenticated users cannot read, insert, update,
+-- or delete audit logs. Only SECURITY DEFINER triggers and service role can access.
+
+-- ============================================================
+-- Prompt versions: read-only for authenticated users (system config)
+-- ============================================================
+
+ALTER TABLE prompt_versions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "authenticated_read_prompt_versions" ON prompt_versions
   FOR SELECT TO authenticated USING (true);
