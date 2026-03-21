@@ -78,6 +78,7 @@ export interface Document {
   fileSize: number;
   status: DocumentStatus;
   pages: number | null;
+  pdfHash: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -186,6 +187,12 @@ export interface RAGContext {
   graphResults: Array<{ content: string; score: number; path: string[] }>;
   fusedResults: Array<{ content: string; score: number; source: string }>;
 }
+
+// ============================================================
+// Schemas
+// ============================================================
+
+export { ExtractionOutputSchema, type ExtractionOutput } from './schemas/extraction.js';
 
 // ============================================================
 // Constants

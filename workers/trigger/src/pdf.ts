@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { db, extractions, documents } from "@kratos/db";
 import { eq } from "drizzle-orm";
 import pino from "pino";
+import { ExtractionOutputSchema } from "@kratos/core";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -20,16 +21,6 @@ export const PdfPayloadSchema = z.object({
 });
 
 export type PdfPayload = z.infer<typeof PdfPayloadSchema>;
-
-interface PythonResult {
-  status: "completed" | "failed";
-  rawText?: string;
-  tablesCount?: number;
-  pageCount?: number;
-  extractionMethod?: string;
-  contentJson?: Record<string, unknown>;
-  error?: string;
-}
 
 /** Pure function — testable without Trigger.dev runtime */
 export async function runPdfJob(payload: PdfPayload): Promise<void> {
@@ -47,7 +38,11 @@ export async function runPdfJob(payload: PdfPayload): Promise<void> {
       timeout: 300_000, // 5 minutes max for large PDFs
     });
 
-    const result: PythonResult = JSON.parse(proc.stdout);
+    const parsed = ExtractionOutputSchema.safeParse(JSON.parse(proc.stdout));
+    if (!parsed.success) {
+      throw new Error(`Extraction output validation failed: ${parsed.error.message}`);
+    }
+    const result = parsed.data;
 
     if (result.status === "failed") {
       throw new Error(result.error ?? "Python pipeline returned failed status");

@@ -18,6 +18,9 @@
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
   "devDependencies": {
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// All mocks must use inline factories — vi.mock() is hoisted,
+// so module-level variables are NOT initialized when the factory runs.
+
 vi.mock("execa", () => ({
   execa: vi.fn().mockResolvedValue({
     stdout: JSON.stringify({
@@ -14,14 +17,10 @@ vi.mock("execa", () => ({
   }),
 }));
 
-const mockInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{ id: "ext-new" }]) });
-const mockSet = vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) });
-const mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
-
 vi.mock("@kratos/db", () => ({
   db: {
-    insert: mockInsert,
-    update: mockUpdate,
+    insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([{ id: "ext-new" }]) }),
+    update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) }),
   },
   extractions: {},
   documents: {},
@@ -61,7 +60,28 @@ describe("runPdfJob", () => {
       fileName: "test.pdf",
     });
 
-    // update should be called to set status=failed
+    expect(db.update as ReturnType<typeof vi.fn>).toHaveBeenCalled();
+  });
+
+  it("throws on invalid Python output schema", async () => {
+    const { execa } = await import("execa");
+    (execa as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      stdout: JSON.stringify({ status: "invalid_status" }),
+      stderr: "",
+    });
+
+    const { runPdfJob } = await import("./pdf.js");
+
+    await runPdfJob({
+      documentId: "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      userId: "f1e2d3c4-b5a6-7890-abcd-ef1234567890",
+      filePath: "user/doc/test.pdf",
+      fileName: "test.pdf",
+    });
+
+    // The validation error should cause it to fall into the catch block
+    // which updates the document status to 'failed'
+    const { db } = await import("@kratos/db");
     expect(db.update as ReturnType<typeof vi.fn>).toHaveBeenCalled();
   });
 });
