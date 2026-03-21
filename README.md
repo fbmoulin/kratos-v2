@@ -1,6 +1,6 @@
 # KRATOS - Sistema de Automação Jurídica de Elite
 
-![Versão](https://img.shields.io/badge/version-2.6.0-blue)
+![Versão](https://img.shields.io/badge/version-2.7.0-blue)
 ![Status](https://img.shields.io/badge/status-beta-brightgreen)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/seu-usuario/kratos/ci.yml?branch=main)](https://github.com/seu-usuario/kratos/actions)
 [![Licença](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -154,10 +154,11 @@ O Turborepo irá gerenciar a execução paralela dos serviços:
 | **Fase 4** | ✅ Concluída | Vitest v8 coverage, Sentry (frontend + backend), CD workflows (Vercel + Railway) |
 | **Hardening** | ✅ Concluída | 23 tasks: segurança, build/deploy, async pipeline, API robustness, frontend fixes |
 | **v2.6.0** | ✅ Concluída | Trigger.dev migration, DOCX export, document detail endpoint, quality fixes |
+| **v2.7.0** | ✅ Concluída | Release readiness (review/export tests, HITL audit trail) + Lex adapter (ingestion contract) |
 
 ### Métricas Atuais
-- **235 testes** passando (75 AI + 41 API + 34 Web + 31 DB + 24 PDF Worker + 18 Core + 7 Trigger + 3 Analysis Worker + 2 DOCX Worker)
-- **45 test suites** across 9 packages
+- **283 testes** passando (87 AI + 61 API + 34 Web + 31 DB + 31 Core + 24 PDF Worker + 10 Trigger + 3 Analysis Worker + 2 DOCX Worker)
+- **48 test suites** across 9 packages
 - **8 tabelas** no Postgres com pgvector
 - **100 precedentes** STJ com embeddings 1536d
 - **4 CI/CD workflows** (CI, deploy-staging, deploy-production, integration)

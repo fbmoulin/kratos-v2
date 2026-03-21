@@ -1,14 +1,14 @@
 # KRATOS v2 — API Reference
 
 **Base URL:** `http://localhost:3001/v2` (dev) | `https://api-production-8225.up.railway.app/v2` (production)
-**Version:** 2.6.0
-**Last updated:** 2026-02-18
+**Version:** 2.7.0
+**Last updated:** 2026-03-21
 
 ---
 
 ## Authentication
 
-All `/documents` endpoints require a Supabase JWT in the `Authorization` header.
+All `/documents` and `/ingest` endpoints require a Supabase JWT in the `Authorization` header.
 Health and root endpoints are public.
 
 ```
@@ -320,6 +320,51 @@ Get signed download URL for the generated DOCX file. Poll this endpoint after `P
 
 ---
 
+### Ingestion (External Adapters)
+
+#### `POST /v2/ingest`
+
+Ingest a PDF document from an external system (Lex-Intelligentia, n8n, API). Accepts JSON body (not multipart). Reuses the same extraction pipeline as manual uploads.
+
+**Rate limit:** `UPLOAD_PER_MINUTE` (10/min)
+
+**Request body:**
+```json
+{
+  "source": "lex-intelligentia",
+  "pdfBase64": "JVBER...",
+  "fileName": "processo.pdf",
+  "metadata": {
+    "numeroProcesso": "0001234-56.2024.8.08.0001",
+    "tribunal": "TJES",
+    "classe": "Ação Civil",
+    "assunto": "Dano Moral"
+  }
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `source` | `'lex-intelligentia' \| 'n8n' \| 'api'` | Yes | External source identifier |
+| `pdfBase64` | string | One of | Base64-encoded PDF content |
+| `pdfUrl` | string (URL) | One of | URL to download PDF from |
+| `fileName` | string | Yes | Original filename |
+| `metadata` | object | No | Optional legal metadata |
+
+**Response (201) — created:**
+```json
+{ "data": { "id": "doc-uuid", "status": "pending", ... } }
+```
+
+**Response (200) — deduplicated:**
+```json
+{ "data": { "id": "existing-doc-uuid", ... }, "deduplicated": true, "message": "Documento identico ja processado anteriormente" }
+```
+
+**Errors:** 400 (invalid payload, not a PDF, download failed), 401 (no auth)
+
+---
+
 ## HTTP Status Codes
 
 | Code | Meaning | Used by |
@@ -392,7 +437,7 @@ Requests pass through middleware in this order:
 2. **Secure Headers** — Sets `X-Content-Type-Options`, `X-Frame-Options`, etc.
 3. **CORS** — Allows origin from `CORS_ORIGIN` env (default: `http://localhost:5173`)
 4. **X-Request-ID** — Propagates or generates UUID for log correlation
-5. **Auth** _(documents only)_ — Validates Supabase JWT, sets `user`/`userId` on context
+5. **Auth** _(documents + ingest)_ — Validates Supabase JWT, sets `user`/`userId` on context, calls `set_config('app.current_user_id')` for SQL audit triggers
 6. **Rate Limiter** _(upload/analyze/export only)_ — Sliding-window per IP
 
 ---

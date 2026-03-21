@@ -200,7 +200,7 @@ export { IngestionPayloadSchema, type IngestionPayload } from './schemas/ingesti
 // ============================================================
 
 export const APP_NAME = 'KRATOS v2';
-export const APP_VERSION = '2.6.0';
+export const APP_VERSION = '2.7.0';
 
 /** Cache TTL values in seconds for Redis/CDN caching strategies. */
 export const CACHE_TTL = {

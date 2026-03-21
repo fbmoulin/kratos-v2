@@ -143,19 +143,19 @@ All 23 tasks completed per CHANGELOG v2.5.0:
 
 ---
 
-## Release Readiness — Workstream E (2026-03-21) — IN PROGRESS
+## Release Readiness — Workstream E (2026-03-21) — DONE
 
-- [x] **T14:** Review/Export route tests + E2E smoke test extension
-- [x] **T15:** HITL audit trail — audit logging in DOCX worker + SQL session user_id
-- [ ] **T16:** Lex-Intelligentia integration docs
-- [ ] **T17:** Lex→KRATOS ingestion contract + endpoint
+- [x] **T14:** Review/Export route tests + E2E smoke test extension (11 tests)
+- [x] **T15:** HITL audit trail — audit logging in DOCX worker + SQL session user_id (3 tests)
+- [x] **T16:** Lex-Intelligentia integration docs (`docs/integrations/lex-intelligentia.md`)
+- [x] **T17:** Lex→KRATOS ingestion contract + endpoint (9 tests, POST /v2/ingest)
 
 ---
 
 ## Post-MVP (Enterprise)
 
 - [ ] Full PDF pipeline (Docling + pdfplumber + Gemini Vision)
-- [ ] LangSmith integration for LangGraph tracing
+- [x] LangSmith integration for LangGraph tracing — **Done in Sprint 4**
 - [ ] Multiple DOCX templates per document type
 - [ ] Playwright E2E test execution
 - [ ] Prometheus/Grafana monitoring dashboards

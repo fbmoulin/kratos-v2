@@ -7,6 +7,31 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.7.0] - 2026-03-21 — Release Readiness + Lex Adapter (Sprints 5+6)
+
+### Adicionado
+
+#### Sprint 5: Release Readiness
+- **Review route tests (6):** PUT /:id/review — approved, revised (stores reviewedDraft), rejected, invalid action 400, non-completed guard 400, audit log verification
+- **Export route tests (5):** POST /:id/export — enqueues docx-export, non-reviewed guard 400, audit log, GET returns signed URL, GET returns 404 when not ready
+- **E2E script extension:** Stage 5 (review) and Stage 6 (export) added to `scripts/test-e2e-full.ts`
+- **DOCX worker audit logging:** `export:completed` and `export:failed` audit log entries inserted via `db.insert(auditLogs)` on success/failure
+- **SQL session user attribution:** Auth middleware calls `set_config('app.current_user_id', user.id, true)` — SQL audit triggers now attribute actions to the authenticated user
+
+#### Sprint 6: Lex-Intelligentia Adapter
+- **Integration docs:** `docs/integrations/lex-intelligentia.md` — adapter pattern, data flow, security model, design principles
+- **IngestionPayloadSchema (Zod):** Accepts PDF via base64 or URL, extensible source enum (`lex-intelligentia`, `n8n`, `api`), optional legal metadata
+- **POST /v2/ingest:** JSON ingestion endpoint — validates payload, resolves PDF (base64 decode or URL fetch), magic bytes check, SHA-256 dedup, creates document, enqueues extraction, audit logs with source
+- **9 ingestion tests:** 5 schema validation + 4 route tests (base64 ingest, dedup, missing PDF, invalid PDF)
+
+### Métricas
+- **283 testes** passando (87 AI + 61 API + 34 Web + 31 DB + 31 Core + 24 PDF Worker + 10 Trigger + 3 Analysis Worker + 2 DOCX Worker)
+- **48 test suites** across 9 packages
+- **19 commits** total (15 Sprints 1-4 + 4 Sprints 5-6)
+- **All 10 Definition of Done items** from the operational plan verified complete
+
+---
+
 ## [2.6.0] - 2026-02-18 — DOCX Worker + Code Quality Fixes
 
 ### Adicionado
