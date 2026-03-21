@@ -1,7 +1,7 @@
 import { schemaTask } from "@trigger.dev/sdk/v3";
 import { z } from "zod";
-import { createAnalysisWorkflow, createInitialState, buildTracingConfig, resolvePromptWithMetadata, PROMPT_KEYS } from "@kratos/ai";
-import { db, analyses, documents } from "@kratos/db";
+import { createAnalysisWorkflow, createInitialState, buildTracingConfig, resolvePromptWithMetadata, promptRepo, PROMPT_KEYS } from "@kratos/ai";
+import { db, analyses, documents, auditLogs } from "@kratos/db";
 import { eq } from "drizzle-orm";
 import pino from "pino";
 
@@ -26,7 +26,20 @@ export async function runAnalysisJob(payload: AnalysisPayload): Promise<void> {
     const promptMeta = await resolvePromptWithMetadata(
       PROMPT_KEYS.FIRAC_ENTERPRISE,
       '', // fallback not used in prod — resolver throws on failure
-    ).catch(() => null);
+    );
+
+    // Validate prompt integrity: compare resolved hash against stored hash
+    const validation = await promptRepo.validate(PROMPT_KEYS.FIRAC_ENTERPRISE);
+    if (!validation.valid) {
+      const isProduction = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+      if (isProduction) {
+        throw new Error(
+          `[analysis] Prompt integrity check failed: ${validation.message}. ` +
+          `Blocking analysis to prevent use of tampered prompt.`,
+        );
+      }
+      logger.warn({ documentId, validation }, "Prompt integrity check failed (non-production, continuing)");
+    }
 
     const workflow = createAnalysisWorkflow();
     const initialState = createInitialState({ extractionId, documentId, userId, rawText });
@@ -62,6 +75,24 @@ export async function runAnalysisJob(payload: AnalysisPayload): Promise<void> {
       .update(documents)
       .set({ status: "completed", updatedAt: new Date() })
       .where(eq(documents.id, documentId));
+
+    // Audit log with prompt provenance for CNJ 615/2025 compliance
+    await db.insert(auditLogs).values({
+      entityType: "analysis",
+      entityId: extractionId,
+      action: "analysis:completed",
+      userId,
+      payloadAfter: {
+        documentId,
+        extractionId,
+        modelUsed: finalState.modelUsed,
+        promptKey: promptMeta.promptKey,
+        promptVersion: promptMeta.version,
+        promptHash: promptMeta.contentHash,
+        promptSource: promptMeta.source,
+        latencyMs,
+      },
+    });
 
     logger.info(
       {

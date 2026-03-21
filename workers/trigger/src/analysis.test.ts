@@ -14,6 +14,17 @@ vi.mock("@kratos/ai", () => ({
   })),
   createInitialState: vi.fn((opts) => opts),
   buildTracingConfig: vi.fn(() => ({ runName: "kratos-analysis-pipeline", metadata: {}, tags: [] })),
+  resolvePromptWithMetadata: vi.fn().mockResolvedValue({
+    content: "test prompt content",
+    promptKey: "firac-enterprise",
+    version: 1,
+    contentHash: "abc123hash",
+    source: "database",
+  }),
+  promptRepo: {
+    validate: vi.fn().mockResolvedValue({ valid: true, message: "OK" }),
+  },
+  PROMPT_KEYS: { FIRAC_ENTERPRISE: "firac-enterprise" },
 }));
 
 vi.mock("@kratos/db", () => ({
@@ -27,6 +38,7 @@ vi.mock("@kratos/db", () => ({
   },
   analyses: {},
   documents: {},
+  auditLogs: {},
 }));
 
 vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));

@@ -11,6 +11,9 @@ export const analysisRepo = {
     tokensInput?: number;
     tokensOutput?: number;
     latencyMs?: number;
+    promptKey?: string | null;
+    promptVersion?: number | null;
+    promptHash?: string | null;
   }) {
     const [analysis] = await db.insert(analyses).values({
       extractionId: data.extractionId,
@@ -21,6 +24,9 @@ export const analysisRepo = {
       tokensInput: data.tokensInput ?? 0,
       tokensOutput: data.tokensOutput ?? 0,
       latencyMs: data.latencyMs ?? 0,
+      promptKey: data.promptKey ?? null,
+      promptVersion: data.promptVersion ?? null,
+      promptHash: data.promptHash ?? null,
     }).returning();
 
     return analysis;
