@@ -1,106 +1,109 @@
-# Guia de Variáveis de Ambiente — KRATOS v2
+# Environment Variables — KRATOS v2
 
-**Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
-**Data**: 14 de Fevereiro de 2026
-**Versão**: 1.0
-
----
-
-## 1. Introdução
-
-Este documento lista e descreve todas as variáveis de ambiente necessárias para configurar e executar os diferentes serviços do projeto **KRATOS v2**. É crucial que estas variáveis sejam configuradas corretamente em cada ambiente (desenvolvimento local, staging, produção) para garantir o funcionamento adequado da aplicação.
-
-Para o desenvolvimento local, crie um arquivo `.env` na raiz de cada serviço (`apps/api`, `apps/web`, `workers/pdf-worker`) e preencha com os valores apropriados. **Nunca faça commit de arquivos `.env` para o repositório Git.**
+**Version:** 2.6.0
+**Last verified:** 2026-03-21
 
 ---
 
-## 2. Variáveis Globais (Comuns a Vários Serviços)
+## Quick Start
 
-Estas variáveis são necessárias para a API, o worker e, em alguns casos, o frontend.
+```bash
+cp .env.example .env
+# Fill in: SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY,
+# DATABASE_URL, REDIS_URL, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY
+```
 
-| Variável | Descrição | Exemplo de Valor |
-| :--- | :--- | :--- |
-| `NODE_ENV` | Define o ambiente de execução da aplicação. | `development`, `production`, `test` |
-| `DATABASE_URL` | A URL de conexão completa para o banco de dados PostgreSQL. | `postgresql://user:password@host:port/database` |
-| `REDIS_URL` | A URL de conexão para o servidor Redis, usado como broker do Celery e para caching. | `redis://:password@host:port` |
-
----
-
-## 3. Variáveis do Backend (`apps/api`)
-
-Estas variáveis são específicas para o serviço da API principal.
-
-| Variável | Descrição | Exemplo de Valor |
-| :--- | :--- | :--- |
-| `PORT` | A porta em que o servidor da API irá escutar. | `3001` |
-| `CORS_ORIGIN` | A URL do frontend que tem permissão para acessar a API. | `http://localhost:5173` |
-| `SUPABASE_URL` | A URL do seu projeto Supabase. | `https://xyz.supabase.co` |
-| `SUPABASE_KEY` | A chave de API `anon` do seu projeto Supabase. | `ey...` |
-| `OPENROUTER_API_KEY` | A chave de API para o serviço OpenRouter, usado para roteamento de modelos de IA. | `sk-or-v1...` |
-| `GEMINI_API_KEY` | A chave de API para o Google AI Studio (Gemini). | `AIza...` |
-| `ANTHROPIC_API_KEY` | A chave de API para a Anthropic (Claude). | `sk-ant-api03...` |
-| `OPENAI_API_KEY` | A chave de API para a OpenAI, usada para gerar embeddings (text-embedding-3-small, 1536d). | `sk-proj-...` |
-| `LANGSMITH_API_KEY` | A chave de API para o LangSmith, usado para tracing e observabilidade de IA. | `ls__...` |
+Never commit `.env` files. Use `.env.example` as the template.
 
 ---
 
-## 4. Variáveis do Frontend (`apps/web`)
+## 1. Supabase (Database + Auth + Storage)
 
-Estas variáveis são expostas ao cliente (navegador) e devem ser prefixadas com `VITE_` (se estiver usando Vite).
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_URL` | Yes | Supabase project URL (`https://xxx.supabase.co`) |
+| `SUPABASE_KEY` | Yes | Anon (public) API key — used by frontend and API for auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes (API) | Service role key — bypasses RLS, used by API and workers |
 
-| Variável | Descrição | Exemplo de Valor |
-| :--- | :--- | :--- |
-| `VITE_API_BASE_URL` | A URL base da API do KRATOS para o frontend fazer as requisições. | `http://localhost:3001/v2` |
-| `VITE_SUPABASE_URL` | A URL do seu projeto Supabase, necessária para o cliente Supabase no frontend. | `https://xyz.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | A chave de API `anon` do seu projeto Supabase, necessária para o cliente Supabase no frontend. | `ey...` |
+## 2. Database (Drizzle ORM)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string (Supabase pooler recommended) |
+
+## 3. Redis (Queues + Cache)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `REDIS_URL` | Yes | Redis 7 connection string — job queues (`kratos:jobs:*`) and cache |
+
+## 4. AI Providers
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key (Claude models for specialist/drafter agents) |
+| `GEMINI_API_KEY` | Yes | Google AI Studio key (Gemini Flash for routing + PDF vision) |
+| `OPENAI_API_KEY` | Yes | OpenAI key (text-embedding-3-small, 1536d for RAG embeddings) |
+| `LANGSMITH_API_KEY` | No | LangSmith key for LangGraph tracing and observability |
+
+## 5. Trigger.dev (Background Tasks)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TRIGGER_SECRET_KEY` | Yes (prod) | Trigger.dev project secret — authenticates task execution |
+
+## 6. Application
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NODE_ENV` | No | `development` | Runtime environment (`development`, `production`, `test`) |
+| `PORT` | No | `3001` | API server port |
+| `CORS_ORIGIN` | Yes (prod) | `http://localhost:5173` | Allowed CORS origin (must be non-localhost in production) |
+
+## 7. Monitoring (Sentry)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SENTRY_DSN` | No | Backend Sentry DSN (`@sentry/node`) |
+| `VITE_SENTRY_DSN` | No | Frontend Sentry DSN (`@sentry/react`, `VITE_` prefix exposes to browser) |
+
+## 8. Frontend (`apps/web` — `VITE_` prefix)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_BASE_URL` | Yes | API base URL (e.g., `http://localhost:3001/v2`) |
+| `VITE_SUPABASE_URL` | Yes | Supabase project URL (client-side) |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anon key (client-side) |
+
+## 9. Deploy (CI/CD — GitHub Secrets only)
+
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `VERCEL_TOKEN` | GitHub Secrets | Vercel API token (frontend deploy) |
+| `VERCEL_ORG_ID` | GitHub Secrets | Vercel org ID |
+| `VERCEL_PROJECT_ID` | GitHub Secrets | Vercel project ID |
+| `RAILWAY_TOKEN` | GitHub Secrets | Railway deploy token (staging) |
+| `RAILWAY_PRODUCTION_TOKEN` | GitHub Secrets | Railway production deploy token |
+| `STAGING_API_URL` | GitHub Secrets | Staging API URL (frontend build) |
+| `PRODUCTION_API_URL` | GitHub Secrets | Production API URL (frontend build) |
+
+## 10. Testing (Development only)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `TEST_USER_ID` | No | UUID for auth bypass in dev (`NODE_ENV=development` only) |
+| `E2E_USER_EMAIL` | No | Playwright E2E test user email |
+| `E2E_USER_PASSWORD` | No | Playwright E2E test user password |
 
 ---
 
-## 5. Variáveis do Worker (`workers/pdf-worker`)
+## Removed Variables
 
-Estas variáveis são necessárias para o worker Celery que processa os PDFs.
+These variables were removed in v2.5.0+ and should NOT be used:
 
-| Variável | Descrição | Exemplo de Valor |
-| :--- | :--- | :--- |
-| `CELERY_BROKER_URL` | A URL do broker Redis para o Celery. Geralmente a mesma que `REDIS_URL`. | `redis://localhost:6379/0` |
-| `CELERY_RESULT_BACKEND` | A URL do backend de resultados do Celery. Geralmente a mesma que `REDIS_URL`. | `redis://localhost:6379/0` |
-| `SUPABASE_URL` | A URL do seu projeto Supabase. | `https://xyz.supabase.co` |
-| `SUPABASE_KEY` | A chave de serviço (`service_role`) do seu projeto Supabase, pois o worker precisa de permissões elevadas para escrever no banco de dados. | `ey...` |
-| `GEMINI_API_KEY` | A chave de API para o Google AI Studio (Gemini), usada no pipeline de extração. | `AIza...` |
-
----
-
-## 6. Variáveis de Teste E2E
-
-Estas variáveis são opcionais e usadas apenas para testes end-to-end em desenvolvimento.
-
-| Variável | Descrição | Exemplo de Valor |
-| :--- | :--- | :--- |
-| `TEST_USER_ID` | UUID de um usuário fictício para bypass de autenticação em dev. Só funciona quando `NODE_ENV=development`. | `00000000-0000-0000-0000-000000000001` |
-| `API_BASE_URL` | URL base da API para o script E2E. | `http://localhost:3001` |
-| `E2E_USER_EMAIL` | Email do usuário de teste para Playwright E2E. | `test@example.com` |
-| `E2E_USER_PASSWORD` | Senha do usuário de teste para Playwright E2E. | `testpassword123` |
-
----
-
-## 7. Variáveis de Monitoramento (Sentry)
-
-| Variável | Descrição | Exemplo de Valor |
-| :--- | :--- | :--- |
-| `SENTRY_DSN` | DSN do Sentry para o backend (Node.js). Captura exceptions no `app.onError`. | `https://xxx@o0.ingest.sentry.io/0` |
-| `VITE_SENTRY_DSN` | DSN do Sentry para o frontend (React). Prefixo `VITE_` expõe ao navegador. | `https://xxx@o0.ingest.sentry.io/0` |
-
----
-
-## 8. Variáveis de Deploy (CI/CD)
-
-Estas variáveis devem ser configuradas como **GitHub Secrets** no repositório. Não são necessárias para desenvolvimento local.
-
-| Variável | Descrição | Onde Configurar |
-| :--- | :--- | :--- |
-| `VERCEL_TOKEN` | Token de API do Vercel para deploy do frontend. | GitHub Secrets |
-| `VERCEL_ORG_ID` | ID da organização no Vercel. | GitHub Secrets |
-| `VERCEL_PROJECT_ID` | ID do projeto no Vercel. | GitHub Secrets |
-| `FLY_API_TOKEN` | Token de API do Fly.io para deploy da API. | GitHub Secrets |
-| `STAGING_API_URL` | URL da API em staging (para build do frontend). | GitHub Secrets |
-| `PRODUCTION_API_URL` | URL da API em produção (para build do frontend). | GitHub Secrets |
+| Variable | Reason | Replacement |
+|----------|--------|-------------|
+| `CELERY_BROKER_URL` | Celery workers replaced by Trigger.dev tasks (v2.6.0) | `TRIGGER_SECRET_KEY` |
+| `CELERY_RESULT_BACKEND` | Celery workers replaced by Trigger.dev tasks (v2.6.0) | `TRIGGER_SECRET_KEY` |
+| `FLY_API_TOKEN` | Fly.io replaced by Railway (v2.5.0) | `RAILWAY_TOKEN` |
+| `OPENROUTER_API_KEY` | OpenRouter replaced by direct provider SDKs (v2.1.0) | `ANTHROPIC_API_KEY` + `GEMINI_API_KEY` |
