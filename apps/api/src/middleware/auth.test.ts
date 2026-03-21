@@ -12,6 +12,14 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
+const mockExecute = vi.fn().mockResolvedValue(undefined);
+vi.mock('@kratos/db', () => ({
+  db: { execute: mockExecute },
+}));
+vi.mock('drizzle-orm', () => ({
+  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
+}));
+
 describe('authMiddleware', () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
@@ -107,5 +115,24 @@ describe('authMiddleware', () => {
 
     const body = await res.json();
     expect(body.userId).toBe('user-123');
+  });
+
+  test('sets app.current_user_id via set_config after successful auth', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
+    vi.stubEnv('SUPABASE_KEY', 'test-key');
+
+    const { authMiddleware } = await import('./auth.js');
+    const { Hono } = await import('hono');
+
+    const app = new Hono();
+    app.use('*', authMiddleware);
+    app.get('/', (c) => c.json({ userId: c.get('userId') }));
+
+    const res = await app.request('/', {
+      headers: { Authorization: 'Bearer valid-token' },
+    });
+    expect(res.status).toBe(200);
+    expect(mockExecute).toHaveBeenCalled();
   });
 });

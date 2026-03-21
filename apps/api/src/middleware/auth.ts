@@ -21,6 +21,8 @@
  */
 import { Context, Next } from 'hono';
 import { createClient } from '@supabase/supabase-js';
+import { db } from '@kratos/db';
+import { sql } from 'drizzle-orm';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_KEY || '';
@@ -69,6 +71,13 @@ export async function authMiddleware(c: Context, next: Next) {
 
     c.set('user', user);
     c.set('userId', user.id);
+
+    // Set user context for SQL audit triggers (transaction-local)
+    try {
+      await db.execute(sql`SELECT set_config('app.current_user_id', ${user.id}::text, true)`);
+    } catch {
+      // Non-fatal: audit triggers work without this, just with null user_id
+    }
 
     await next();
   } catch {

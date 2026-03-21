@@ -143,6 +143,15 @@ All 23 tasks completed per CHANGELOG v2.5.0:
 
 ---
 
+## Release Readiness — Workstream E (2026-03-21) — IN PROGRESS
+
+- [x] **T14:** Review/Export route tests + E2E smoke test extension
+- [x] **T15:** HITL audit trail — audit logging in DOCX worker + SQL session user_id
+- [ ] **T16:** Lex-Intelligentia integration docs
+- [ ] **T17:** Lex→KRATOS ingestion contract + endpoint
+
+---
+
 ## Post-MVP (Enterprise)
 
 - [ ] Full PDF pipeline (Docling + pdfplumber + Gemini Vision)

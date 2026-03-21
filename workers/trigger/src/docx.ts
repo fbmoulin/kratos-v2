@@ -1,7 +1,7 @@
 import { schemaTask } from "@trigger.dev/sdk/v3";
 import { z } from "zod";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { db, analyses, documents, extractions } from "@kratos/db";
+import { db, analyses, documents, extractions, auditLogs } from "@kratos/db";
 import { buildDocxBuffer } from "@kratos/tools";
 import { desc, eq } from "drizzle-orm";
 import pino from "pino";
@@ -76,11 +76,28 @@ export async function runDocxJob(payload: DocxPayload, supabase?: SupabaseClient
   const buffer = await buildDocxBuffer(draft, { title });
   const path = `${userId}/${documentId}/${fileName}`;
 
-  const { error } = await client.storage
+  const { error: uploadError } = await client.storage
     .from(DOCX_BUCKET)
     .upload(path, buffer, { contentType: DOCX_MIME, upsert: true });
 
-  if (error) throw new Error(`DOCX upload failed: ${error.message}`);
+  if (uploadError) {
+    await db.insert(auditLogs).values({
+      entityType: 'document',
+      entityId: documentId,
+      action: 'export:failed',
+      payloadAfter: { error: uploadError.message },
+      userId,
+    });
+    throw new Error(`DOCX upload failed: ${uploadError.message}`);
+  }
+
+  await db.insert(auditLogs).values({
+    entityType: 'document',
+    entityId: documentId,
+    action: 'export:completed',
+    payloadAfter: { format: 'docx', path, fileName },
+    userId,
+  });
 
   logger.info({ documentId, path }, "DOCX export completed");
 }
