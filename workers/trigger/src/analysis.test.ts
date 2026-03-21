@@ -99,4 +99,49 @@ describe("runAnalysisJob", () => {
     // Should update status to failed, not throw
     expect((db.update as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
   });
+
+  it("creates audit log entry on success", async () => {
+    const { runAnalysisJob } = await import("./analysis.js");
+    const { db, analyses, auditLogs } = await import("@kratos/db");
+
+    await runAnalysisJob({
+      documentId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      userId: "f1e2d3c4-b5a6-7890-abcd-ef1234567890",
+      extractionId: "e1f2a3b4-c5d6-7890-abcd-ef1234567890",
+      rawText: "Test document content for audit log verification.",
+    });
+
+    // db.insert should be called at least twice: once for analyses, once for auditLogs
+    expect((db.insert as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(db.insert).toHaveBeenCalledWith(analyses);
+    expect(db.insert).toHaveBeenCalledWith(auditLogs);
+  });
+
+  it("marks document as failed when prompt integrity validation fails in production", async () => {
+    const { promptRepo } = await import("@kratos/ai");
+    (promptRepo.validate as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      valid: false,
+      message: "hash mismatch",
+    });
+
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const { runAnalysisJob } = await import("./analysis.js");
+      const { db } = await import("@kratos/db");
+
+      await runAnalysisJob({
+        documentId: "c3d4e5f6-a7b8-9012-cdef-123456789012",
+        userId: "f1e2d3c4-b5a6-7890-abcd-ef1234567890",
+        extractionId: "e1f2a3b4-c5d6-7890-abcd-ef1234567890",
+        rawText: "Test content for prompt integrity failure.",
+      });
+
+      // Should update document status to failed (caught by outer catch block)
+      expect((db.update as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
 });
