@@ -5,6 +5,7 @@ export interface PdfJob {
   userId: string;
   filePath: string;
   fileName: string;
+  pdfHash?: string;
 }
 
 export interface DocxJob {
@@ -22,7 +23,10 @@ export interface AnalysisJob {
 
 export const triggerService = {
   async enqueuePdfExtraction(job: PdfJob): Promise<void> {
-    await tasks.trigger("pdf-extraction", job);
+    await tasks.trigger("pdf-extraction", job, {
+      idempotencyKey: job.pdfHash ? `pdf-extract:${job.pdfHash}` : undefined,
+      idempotencyKeyTTL: "24h",
+    });
   },
 
   async enqueueDocxExport(job: DocxJob): Promise<void> {

@@ -45,6 +45,7 @@ describe('Schema: documents table', () => {
         'status',
         'pages',
         'errorMessage',
+        'pdfHash',
         'createdAt',
         'updatedAt',
       ]),

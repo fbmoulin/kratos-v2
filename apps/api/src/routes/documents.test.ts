@@ -45,6 +45,7 @@ vi.mock('../services/document-repo.js', () => ({
       mimeType: 'application/pdf',
       status: 'pending',
       pages: null,
+      pdfHash: null,
       errorMessage: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -56,6 +57,7 @@ vi.mock('../services/document-repo.js', () => ({
     getById: vi.fn().mockResolvedValue(null),
     getExtraction: vi.fn().mockResolvedValue(null),
     updateStatus: vi.fn().mockResolvedValue(null),
+    findByHash: vi.fn().mockResolvedValue(null),
   },
 }));
 
@@ -420,6 +422,77 @@ describe('Document routes', () => {
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error.message).toContain('not found');
+  });
+
+  // ---- Dedup tests ----
+
+  test('POST /v2/documents returns existing document when duplicate hash detected', async () => {
+    const { documentRepo } = await import('../services/document-repo.js');
+    vi.mocked(documentRepo.findByHash).mockResolvedValueOnce({
+      id: 'existing-doc',
+      userId: 'test-user-id',
+      fileName: 'original.pdf',
+      filePath: 'test-user-id/existing-doc/original.pdf',
+      fileSize: 1024,
+      mimeType: 'application/pdf',
+      status: 'completed',
+      pages: 5,
+      pdfHash: 'abc123',
+      errorMessage: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    vi.mocked(documentRepo.getExtraction).mockResolvedValueOnce({
+      id: 'ext-existing',
+      documentId: 'existing-doc',
+      contentJson: { text: 'already extracted' },
+      extractionMethod: 'pdfplumber',
+      rawText: 'raw',
+      tablesCount: 1,
+      imagesCount: 0,
+      createdAt: new Date(),
+    });
+
+    const formData = new FormData();
+    formData.append(
+      'file',
+      new Blob(['%PDF-1.4 fake content'], { type: 'application/pdf' }),
+      'duplicate.pdf',
+    );
+
+    const res = await app.request('/v2/documents', {
+      method: 'POST',
+      headers: authHeader,
+      body: formData,
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.deduplicated).toBe(true);
+    expect(body.data.id).toBe('existing-doc');
+    expect(body.message).toContain('identico');
+  });
+
+  test('POST /v2/documents proceeds normally when no hash match', async () => {
+    const { documentRepo } = await import('../services/document-repo.js');
+    vi.mocked(documentRepo.findByHash).mockResolvedValueOnce(null);
+
+    const formData = new FormData();
+    formData.append(
+      'file',
+      new Blob(['%PDF-1.4 unique content'], { type: 'application/pdf' }),
+      'new-doc.pdf',
+    );
+
+    const res = await app.request('/v2/documents', {
+      method: 'POST',
+      headers: authHeader,
+      body: formData,
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.deduplicated).toBeUndefined();
   });
 
   test('POST /v2/documents/:id/analyze returns 400 when extraction not ready', async () => {

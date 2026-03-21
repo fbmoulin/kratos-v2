@@ -30,6 +30,7 @@ vi.mock('../services/document-repo.js', () => ({
     getById: vi.fn(),
     getExtraction: vi.fn(),
     updateStatus: vi.fn(),
+    findByHash: vi.fn().mockResolvedValue(null),
   },
 }));
 

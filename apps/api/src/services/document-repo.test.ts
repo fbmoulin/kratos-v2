@@ -63,5 +63,10 @@ describe('DocumentRepo', () => {
     expect(documentRepo.getById).toBeDefined();
     expect(documentRepo.create).toBeDefined();
     expect(documentRepo.getExtraction).toBeDefined();
+    expect(documentRepo.findByHash).toBeDefined();
+  });
+
+  test('findByHash is a function', () => {
+    expect(typeof documentRepo.findByHash).toBe('function');
   });
 });

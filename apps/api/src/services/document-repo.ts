@@ -1,4 +1,4 @@
-import { eq, and, desc, count } from 'drizzle-orm';
+import { eq, and, desc, count, inArray } from 'drizzle-orm';
 import { db, documents, extractions } from '@kratos/db';
 
 export const documentRepo = {
@@ -51,6 +51,23 @@ export const documentRepo = {
     return doc ?? null;
   },
 
+  async findByHash(userId: string, pdfHash: string) {
+    const [doc] = await db
+      .select()
+      .from(documents)
+      .where(
+        and(
+          eq(documents.userId, userId),
+          eq(documents.pdfHash, pdfHash),
+          inArray(documents.status, ['completed', 'processing']),
+        ),
+      )
+      .orderBy(desc(documents.createdAt))
+      .limit(1);
+
+    return doc ?? null;
+  },
+
   async create(data: {
     id: string;
     userId: string;
@@ -58,6 +75,7 @@ export const documentRepo = {
     filePath: string;
     fileSize: number;
     mimeType: string;
+    pdfHash?: string;
   }) {
     const [doc] = await db.insert(documents).values({
       ...data,

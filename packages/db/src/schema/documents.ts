@@ -74,12 +74,14 @@ export const documents = pgTable(
     status: varchar('status', { length: 20 }).notNull().default('pending'),
     pages: integer('pages'),
     errorMessage: text('error_message'),
+    pdfHash: varchar('pdf_hash', { length: 64 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index('idx_documents_user_id').on(table.userId),
     index('idx_documents_status').on(table.status),
+    index('idx_documents_pdf_hash_user').on(table.pdfHash, table.userId),
   ],
 );
 

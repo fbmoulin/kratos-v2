@@ -20,12 +20,37 @@ describe("triggerService", () => {
       fileName: "test.pdf",
     });
 
-    expect(tasks.trigger).toHaveBeenCalledWith("pdf-extraction", {
+    expect(tasks.trigger).toHaveBeenCalledWith(
+      "pdf-extraction",
+      expect.objectContaining({
+        documentId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      }),
+      expect.objectContaining({
+        idempotencyKey: undefined,
+      }),
+    );
+  });
+
+  it("passes idempotencyKey when pdfHash is provided", async () => {
+    const { triggerService } = await import("./trigger.js");
+    const { tasks } = await import("@trigger.dev/sdk/v3");
+
+    await triggerService.enqueuePdfExtraction({
       documentId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       userId: "f1e2d3c4-b5a6-7890-abcd-ef1234567890",
       filePath: "user/doc/test.pdf",
       fileName: "test.pdf",
+      pdfHash: "abc123def456",
     });
+
+    expect(tasks.trigger).toHaveBeenCalledWith(
+      "pdf-extraction",
+      expect.objectContaining({ pdfHash: "abc123def456" }),
+      expect.objectContaining({
+        idempotencyKey: "pdf-extract:abc123def456",
+        idempotencyKeyTTL: "24h",
+      }),
+    );
   });
 
   it("triggers analysis-job task with correct payload", async () => {

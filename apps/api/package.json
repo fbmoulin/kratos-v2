@@ -20,6 +20,7 @@
     "@kratos/db": "workspace:*",
     "@sentry/node": "^10.38.0",
     "@supabase/supabase-js": "^2.49.0",
+    "@trigger.dev/sdk": "^4.3.3",
     "drizzle-orm": "^0.39.0",
     "hono": "^4.7.0",
     "ioredis": "^5.4.0",

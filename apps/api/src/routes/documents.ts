@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { createHash } from 'node:crypto';
 import type { AppEnv } from '../types.js';
 import { z } from 'zod';
 import { storageService } from '../services/storage.js';
@@ -85,6 +86,21 @@ documentsRouter.post('/', rateLimiter(RATE_LIMITS.UPLOAD_PER_MINUTE), async (c) 
 
   const safeName = sanitizeFileName(file.name);
 
+  // Compute SHA-256 hash for dedup (per-user)
+  const pdfHash = createHash('sha256').update(fileBuffer).digest('hex');
+
+  // Fast-path dedup: check if same PDF already processed for this user
+  const existing = await documentRepo.findByHash(userId, pdfHash);
+  if (existing) {
+    const extraction = await documentRepo.getExtraction(existing.id);
+    return c.json({
+      data: existing,
+      extraction,
+      deduplicated: true,
+      message: 'Documento identico ja processado anteriormente',
+    }, 200);
+  }
+
   const { path } = await storageService.uploadDocument({
     userId,
     documentId,
@@ -100,6 +116,7 @@ documentsRouter.post('/', rateLimiter(RATE_LIMITS.UPLOAD_PER_MINUTE), async (c) 
     filePath: path,
     fileSize: file.size,
     mimeType: file.type,
+    pdfHash,
   });
 
   await triggerService.enqueuePdfExtraction({
@@ -107,6 +124,7 @@ documentsRouter.post('/', rateLimiter(RATE_LIMITS.UPLOAD_PER_MINUTE), async (c) 
     userId: doc.userId,
     filePath: doc.filePath!,
     fileName: safeName,
+    pdfHash,
   });
 
   return c.json({ data: doc }, 201);
