@@ -1,211 +1,157 @@
-# KRATOS v2 - Lista de Tarefas (To-Do)
+# KRATOS v2 — Operational Backlog
 
-Esta lista de tarefas detalha as ações necessárias para a implementação do MVP do KRATOS v2, organizada por fases conforme o roadmap do projeto.
-
----
-
-## Fase 0: Fundação, Segurança e CI/CD ✅ CONCLUÍDA
-
-- [x] **Infraestrutura e Monorepo**
-  - [x] Inicializar repositório Git.
-  - [x] Configurar `pnpm workspaces` e `Turborepo`.
-  - [x] Estruturar diretórios: `apps/`, `packages/`, `workers/`.
-  - [x] Configurar ESLint, Prettier e TypeScript para o monorepo.
-  - [x] Criar arquivo `docker-compose.yml` para serviços locais (Redis).
-
-- [x] **Banco de Dados (Supabase/PostgreSQL)**
-  - [x] Criar projeto no Supabase (`jzgdorcvfxlahffqnyor`, sa-east-1).
-  - [x] Definir schema Drizzle com 8 tabelas (`documents`, `extractions`, `analyses`, `precedents`, `graph_entities`, `graph_relations`, `prompt_versions`, `audit_logs`).
-  - [x] Habilitar a extensão `pgvector` via Supabase migration.
-  - [x] Aplicar schema via MCP migration (8 tabelas + indexes).
-  - [ ] Implementar triggers SQL para a tabela `audit_logs`.
-  - [ ] Criar índice HNSW para busca vetorial em produção.
-
-- [x] **Segurança e CI/CD**
-  - [x] Documentar todas as variáveis de ambiente no `docs/ENV.md`.
-  - [x] Criar workflow no GitHub Actions para CI (lint, test).
-  - [ ] Configurar segredos no ambiente de staging.
-  - [ ] Criar workflow de CD para staging.
+**Last verified:** 2026-03-21
 
 ---
 
-## Fase 1: Motor de Ingestão e Extração de PDF ✅ CONCLUÍDA (scaffold)
+## Operational Truth Matrix
 
-- [x] **Processamento Assíncrono**
-  - [x] Configurar Celery (worker Python) e Redis (broker).
-  - [x] Criar endpoint na API para upload de PDF e enfileiramento do job.
-  - [ ] Implementar notificação de status no frontend (polling ou WebSocket).
-
-- [x] **Pipeline de Extração** (scaffold — implementação parcial)
-  - [x] Desenvolver o worker Python scaffold (`workers/pdf-worker/`).
-  - [x] Criar Dockerfile para o worker.
-  - [x] Adicionar worker ao docker-compose (`profiles: [worker]`).
-  - [ ] Integrar Docling para extração estrutural de texto.
-  - [ ] Integrar pdfplumber para extração de tabelas.
-  - [ ] Integrar Gemini 2.5 Flash API para OCR.
-  - [ ] Implementar schemas de validação com Pydantic.
-
-- [ ] **Caching**
-  - [ ] Implementar caching dos resultados da extração no Redis.
-  - [ ] Definir TTLs e estratégia de invalidação de cache.
+| Document | Role | Last Verified |
+|----------|------|---------------|
+| README.md | Product vision + quick start | 2026-03-21 |
+| CHANGELOG.md | Authoritative version history | 2026-03-21 |
+| TODO.md | Operational backlog (this file) | 2026-03-21 |
+| ARCHITECTURE.md | Technical architecture (reconciled) | 2026-03-21 |
+| ENV.md | Environment variable reference | 2026-03-21 |
 
 ---
 
-## Fase 2: Orquestração de Agentes e Lógica de IA ✅ CONCLUÍDA
+## Fase 0: Fundacao, Seguranca e CI/CD — DONE
 
-- [x] **Grafo de Agentes (LangGraph)**
-  - [x] Modelar o grafo de decisão: supervisor → router → rag → specialist → drafter → complete.
-  - [x] Implementar agente Supervisor de Complexidade.
-  - [x] Implementar agente Roteador de Matéria (Gemini Flash).
-  - [x] Implementar agentes Especialistas (FIRAC+ Enterprise v3.0, 7-phase CoT).
-  - [x] Implementar agente Drafter (domain prompt registry: GENERICO/BANCARIO/CONSUMIDOR).
-  - [x] Model router: 7-factor complexity scoring, 5-tier model selection.
-
-- [x] **RAG (Retrieval-Augmented Generation)**
-  - [x] Implementar vector-search via pgvector (cosine similarity).
-  - [x] Implementar graph-search (knowledge graph traversal).
-  - [x] Implementar hybrid-search (RRF fusion).
-  - [x] Criar seed script para indexar 100 precedentes STJ com embeddings (`pnpm seed`).
-  - [x] Integrar injeção dinâmica de few-shots nos prompts.
-
-- [x] **Testes AI** — 70 testes passando (15 suites)
-  - [x] Prompts: drafter (12), firac-enterprise (13), templates (6)
-  - [x] Graph: workflow (1), supervisor (6), router (3), specialist (2), drafter (4)
-  - [x] RAG: embeddings (2), vector-search (2), hybrid-search (4), graph-search (2)
-  - [x] Router: model-router (8)
-  - [x] Providers: anthropic + google (3)
-  - [x] State: AgentState (2)
-
-- [ ] **Observabilidade de IA**
-  - [ ] Integrar LangSmith em todos os nós do LangGraph.
-  - [ ] Persistir Chain-of-Thought no banco de dados.
+- [x] Monorepo (pnpm workspaces + Turborepo)
+- [x] ESLint flat config, Prettier, TypeScript
+- [x] Drizzle schema (8 tabelas + pgvector)
+- [x] Schema applied via Supabase MCP migration
+- [x] CI workflow (ci.yml — lint, typecheck, test)
+- [ ] Audit log triggers SQL — **moved to Sprint 1 Compliance (Task 5)**
+- [ ] HNSW index for precedents.embedding — **moved to Sprint 1 Compliance (Task 6)**
 
 ---
 
-## Fase 2.5: E2E Wiring ✅ CONCLUÍDA (2026-02-15)
+## Fase 1: PDF Ingestion — DONE (scaffold)
 
-- [x] **Database**
-  - [x] pgvector extension enabled.
-  - [x] 8 tabelas aplicadas via Supabase MCP migration.
-  - [x] `.env` criado com todas as keys (Supabase, OpenAI, Anthropic, Gemini).
-
-- [x] **RAG Seed**
-  - [x] Script `seed-precedents.ts` busca STJ Dados Abertos (CKAN API).
-  - [x] 100 acordãos de 4 turmas (1ª-4ª) com embeddings 1536d.
-  - [x] Inserção via Supabase REST API (contorna IPv6/WSL2).
-
-- [x] **E2E Scripts**
-  - [x] `test-e2e-full.ts` — upload PDF → poll extraction → analyze → validate.
-  - [x] `test-e2e-pipeline.ts` atualizado com RAG Stage 1.5.
-  - [x] Auth bypass dev em `auth.ts` (NODE_ENV + TEST_USER_ID).
-  - [x] Scripts `seed` e `e2e` adicionados ao root package.json.
-
-- [x] **Docker**
-  - [x] `pdf-worker` adicionado ao docker-compose (`profiles: [worker]`).
+- [x] Upload endpoint + Redis enqueue
+- [x] pdf-worker scaffold (Python/Celery) — **DEPRECATED in v2.6.0, replaced by Trigger.dev**
+- [x] Trigger.dev pdf-extraction task (v2.6.0)
+- [ ] Full Docling/pdfplumber/Gemini Vision integration — **POST-MVP**
+- [ ] Frontend status notification (polling or WebSocket) — **POST-MVP**
+- [ ] Redis extraction cache with TTL — **POST-MVP**
 
 ---
 
-## Fase 3: Frontend, HITL e Geração de Documentos ✅ CONCLUÍDA (2026-02-15)
+## Fase 2: AI Agent Orchestration — DONE
 
-- [x] **Interface de Usuário**
-  - [x] Desenvolver o componente de upload de arquivos (UploadZone com drag-and-drop).
-  - [x] Construir o dashboard principal com visualização de status (DocumentTable + StatsBar).
-  - [x] Implementar skeleton loaders para feedback visual.
-  - [x] Login page com Supabase Auth.
-  - [x] Roteamento com React Router (ProtectedRoute, Layout).
-
-- [x] **Human-in-the-Loop (HITL)**
-  - [x] Criar tela de revisão com painel de raciocínio da IA (ReviewPanel).
-  - [x] Implementar editor de texto para minuta (MinutaEditor).
-  - [x] Desenvolver ações de "Aprovar" e "Rejeitar".
-
-- [ ] **Geração de Documentos** (Pós-MVP)
-  - [ ] Criar templates `.docx` para diferentes tipos de minuta.
-  - [ ] Desenvolver endpoint para gerar documento com docxtpl.
-  - [ ] Integrar botão de download no frontend.
-
-- [x] **Testes Web** — 28 testes passando (9 suites)
-  - [x] Login.test.tsx, Dashboard.test.tsx, Review.test.tsx
-  - [x] DocumentTable.test.tsx, UploadZone.test.tsx, StatsBar.test.tsx
-  - [x] MinutaEditor.test.tsx, ReviewPanel.test.tsx, Layout.test.tsx
+- [x] LangGraph pipeline (supervisor → router → rag → specialist → drafter → complete)
+- [x] FIRAC+ Enterprise v3.0 (7-phase CoT)
+- [x] Model router (7-factor complexity, 5-tier model selection)
+- [x] RAG engine (vector + graph + RRF hybrid search)
+- [x] Domain prompt registry (GENERICO, BANCARIO, CONSUMIDOR)
+- [x] 75 AI tests (16 suites)
+- [ ] LangSmith full integration — **POST-MVP**
+- [ ] Chain-of-Thought persistence in DB — **POST-MVP**
 
 ---
 
-## Fase 4: Testes, Monitoramento e Deploy ✅ CONCLUÍDA (2026-02-15)
+## Fase 2.5: E2E Wiring — DONE
 
-- [x] **Testes e Cobertura**
-  - [x] Vitest v8 coverage configurado em todos os 5 packages.
-  - [x] 171 testes passando (28 web + 24 api + 70 ai + 18 core + 31 db).
-  - [x] Testes para @kratos/web (28), @kratos/db (31).
-  - [x] Coverage thresholds como ratchet (50-60% statements, progressivo).
-  - [x] `pnpm test:coverage` roda no CI com upload de artefatos.
-  - [ ] Testes Playwright E2E (scaffold criado, execução requer infra).
-  - [ ] Testes para @kratos/tools.
-
-- [x] **Monitoramento**
-  - [x] Sentry integrado no frontend (`@sentry/react` com ErrorBoundary).
-  - [x] Sentry integrado no backend (`@sentry/node` com `app.onError`).
-  - [x] Health check aprimorado (`/v2/health/ready` com probes DB/Redis).
-  - [x] Endpoint de métricas (`/v2/health/metrics` com request count, error rate, avg latency).
-  - [ ] Configurar Prometheus/Grafana para dashboards (Pós-MVP).
-
-- [x] **Deploy**
-  - [x] `deploy-staging.yml` — auto-deploy Vercel + Fly.io on push to main.
-  - [x] `deploy-production.yml` — manual approval on tag `v*`.
-  - [x] `fly.toml` configurado (região `gru`, health check).
-  - [x] `apps/web/vercel.json` configurado (SPA rewrites).
-  - [x] `.env.example` atualizado com todas as variáveis.
-  - [ ] Configurar GitHub Secrets para Vercel/Fly.io tokens.
-  - [ ] Teste de carga inicial.
+- [x] DB schema applied (8 tables + pgvector)
+- [x] 100 STJ precedents seeded (1536d embeddings)
+- [x] E2E scripts (upload → extract → analyze → validate)
+- [x] Auth bypass dev (NODE_ENV + TEST_USER_ID)
 
 ---
 
-## Fase 5: Production Hardening (IN PROGRESS — 2026-02-16)
+## Fase 3: Frontend + HITL — DONE
 
-> Plano completo: `docs/plans/2026-02-16-production-hardening.md` (23 tarefas, 5 sprints)
-
-### Sprint 1: Security Hardening
-- [x] Auth bypass guard — bloqueia bypass em production/staging, 5 testes novos
-- [x] CORS + validação de env vars críticas no startup
-- [x] Rate limiter aplicado em upload (10/min), analyze (5/min), export (20/min)
-- [x] Validação de magic bytes PDF + sanitização de filename
-- [x] Auditoria de API keys no git history (limpo, sem leaks)
-
-### Sprint 2: Build & Deploy Pipeline
-- [x] Build real com tsc (substituir tsx em produção)
-- [ ] SIGTERM graceful shutdown (API + PDF worker)
-- [ ] Pino structured logging (substituir console.*)
-- [ ] Remover fly.toml (artefato stale)
-
-### Sprint 3: Async Analysis Pipeline
-- [ ] Queue de análise (`kratos:jobs:analysis`)
-- [ ] Refatorar POST /analyze para async (202 Accepted)
-- [ ] Criar analysis-worker (novo serviço Railway)
-
-### Sprint 4: API & DB Robustness
-- [ ] Zod validation em query parameters
-- [ ] Formato consistente de erro `{ error: { message } }`
-- [ ] DB connection pool limits (max=5)
-- [ ] parseLlmJson — hardening de JSON.parse para respostas LLM
-- [ ] RAG error logging
-- [ ] Drizzle baseline migration
-- [ ] Redis error recovery + retry strategy
-- [ ] X-Request-ID middleware
-
-### Sprint 5: Frontend Fixes
-- [ ] API base URL via VITE_API_BASE_URL
-- [ ] React Error Boundary
-- [ ] Auth token refresh
+- [x] React 19 + Vite 6 + Tailwind 4 + shadcn/ui
+- [x] Pages: Login, Dashboard, Review, DocumentDetail
+- [x] Components: DocumentTable, UploadZone, StatsBar, MinutaEditor, ReviewPanel
+- [x] HITL review flow (approve/reject)
+- [x] 34 web tests (10 suites)
+- [x] DOCX export endpoint + useExport polling (v2.6.0)
+- [ ] Multiple .docx templates per document type — **POST-MVP**
 
 ---
 
-## Pós-MVP (Enterprise)
+## Fase 4: Tests, Monitoring, Deploy — DONE
 
-- [ ] Índice HNSW para precedents.embedding (produção).
-- [ ] Audit log triggers SQL automáticos.
-- [ ] Migração para TiDB se necessário.
-- [ ] Infisical para gestão de segredos.
-- [ ] Integração com APIs de tribunais.
-- [ ] Fine-tuning de modelos open-source.
-- [ ] Arquitetura multi-tenancy.
-- [ ] RLS policies no Supabase.
+- [x] Vitest v8 coverage (all packages)
+- [x] Sentry frontend + backend
+- [x] Health checks (/v2/health/ready, /v2/health/metrics)
+- [x] CI/CD workflows (ci, deploy-staging, deploy-production, integration)
+- [x] Vercel + Railway deploy config
+- [ ] Playwright E2E execution (scaffold exists) — **POST-MVP**
+- [ ] Configure GitHub Secrets for Vercel/Railway — **BLOCKED: requires repo admin**
+
+---
+
+## Fase 5: Production Hardening (v2.5.0) — DONE
+
+All 23 tasks completed per CHANGELOG v2.5.0:
+
+### Sprint 1: Security — DONE
+- [x] Auth bypass guard (production/staging blocks dev bypass)
+- [x] CORS + env validation (crash fast on missing vars)
+- [x] Rate limiter (upload 10/min, analyze 5/min, export 20/min)
+- [x] PDF magic bytes + filename sanitization
+- [x] Git history audit (clean)
+
+### Sprint 2: Build & Deploy — DONE
+- [x] tsc --noEmit type-check (real build)
+- [x] SIGTERM graceful shutdown (10s timeout)
+- [x] Pino structured logging (JSON prod, pretty dev, silent test)
+- [x] fly.toml removed (Railway is deploy target)
+
+### Sprint 3: Async Analysis Pipeline — DONE
+- [x] Analysis queue (kratos:jobs:analysis, Redis BRPOP)
+- [x] POST /analyze async (202 Accepted)
+- [x] analysis-worker (BRPOP, 4.5min timeout, SIGTERM handler)
+
+### Sprint 4: API & DB Robustness — DONE
+- [x] Zod validation on query params
+- [x] Consistent error format { error: { message } }
+- [x] DB connection pool (max=5, idle 20s, connect 10s)
+- [x] parseLlmJson utility (markdown fence stripping)
+- [x] RAG error logging (non-fatal)
+- [x] Drizzle baseline migration
+- [x] X-Request-ID middleware
+
+### Sprint 5: Frontend Fixes — DONE
+- [x] VITE_API_BASE_URL env var
+- [x] React Error Boundary
+- [x] Auth token refresh
+
+---
+
+## v2.6.0: DOCX Worker + Trigger.dev — DONE
+
+- [x] Trigger.dev tasks: pdf-extraction, analysis-job, docx-export
+- [x] DOCX export worker + @kratos/tools buildDocxBuffer
+- [x] GET /v2/documents/:id/export (signed Supabase URL)
+- [x] useExport polling (5s × 12 attempts)
+- [x] Document detail endpoint (doc + extraction + analysis)
+- [x] DocumentStatus.REVIEWED added
+
+---
+
+## Sprint 1 Compliance (Current — 2026-03-21)
+
+- [ ] **Task 5:** Audit log triggers on documents, extractions, analyses (CNJ 615/2025)
+- [ ] **Task 6:** HNSW index on precedents.embedding + graph_entities.embedding
+- [ ] **Task 7:** RLS policies on documents, extractions, analyses (user_id isolation)
+- [ ] **Task 8:** Deprecate legacy pdf-worker, run final test suite
+
+---
+
+## Post-MVP (Enterprise)
+
+- [ ] Full PDF pipeline (Docling + pdfplumber + Gemini Vision)
+- [ ] LangSmith integration for LangGraph tracing
+- [ ] Multiple DOCX templates per document type
+- [ ] Playwright E2E test execution
+- [ ] Prometheus/Grafana monitoring dashboards
+- [ ] Multi-tenancy architecture
+- [ ] Infisical for secrets management
+- [ ] Tribunal API integrations
+- [ ] Fine-tuning of open-source models
+- [ ] Load testing
