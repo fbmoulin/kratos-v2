@@ -79,14 +79,13 @@
       "status": "stub",
       "testFiles": 0
     },
-    "workers/pdf-worker": {
-      "name": "pdf-worker",
-      "purpose": "Python async PDF extraction (Redis BRPOP queue)",
-      "entry": "src/tasks/extract_pdf.py",
-      "language": "python",
-      "pipeline": "Redis BRPOP → Supabase download → pdfplumber → Pydantic → DB save",
-      "queueKey": "kratos:jobs:pdf",
-      "testFiles": 5
+    "workers/trigger": {
+      "name": "trigger-workers",
+      "purpose": "Trigger.dev tasks: PDF extraction + AI analysis",
+      "entry": "src/index.ts",
+      "language": "typescript+python",
+      "pipeline": "Trigger.dev queue → pdf_runner.py subprocess → pdfplumber → Zod validation → DB save",
+      "testFiles": 4
     }
   },
   "database": {
@@ -111,7 +110,7 @@
     "webDev": "pnpm --filter @kratos/web dev",
     "apiTest": "pnpm --filter @kratos/api test",
     "coreTest": "pnpm --filter @kratos/core test",
-    "workerTest": "cd workers/pdf-worker && python -m pytest",
+    "workerTest": "pnpm --filter @kratos/trigger test",
     "dbGenerate": "pnpm --filter @kratos/db db:generate",
     "dbMigrate": "pnpm --filter @kratos/db db:migrate",
     "dbPush": "pnpm --filter @kratos/db db:push",
@@ -122,7 +121,7 @@
     "REDIS_URL", "CORS_ORIGIN", "PORT",
     "GEMINI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY",
     "LANGSMITH_API_KEY",
-    "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"
+    "TRIGGER_SECRET_KEY", "TRIGGER_ACCESS_TOKEN"
   ],
   "phases": {
     "0": { "status": "done", "scope": "Monorepo, CI, DB schema, Drizzle" },

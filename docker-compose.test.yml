@@ -57,22 +57,6 @@ services:
       redis:
         condition: service_healthy
 
-  worker:
-    build:
-      context: ./workers/pdf-worker
-      dockerfile: Dockerfile
-    container_name: kratos-test-worker
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/kratos_test
-      SUPABASE_URL: ${SUPABASE_URL:-http://localhost:54321}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-test-key}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
 volumes:
   pgdata-test:
     driver: local

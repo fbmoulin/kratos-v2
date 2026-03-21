@@ -52,16 +52,16 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-  deploy-worker:
-    name: Deploy PDF Worker (Railway)
+  deploy-trigger:
+    name: Deploy Trigger.dev Tasks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      - name: Setup project
+        uses: ./.github/actions/setup-kratos
 
-      - name: Deploy Worker to Railway
-        run: railway up --service kratos-pdf-worker --detach
+      - name: Deploy Trigger.dev tasks
+        run: pnpm exec trigger-cli deploy
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}

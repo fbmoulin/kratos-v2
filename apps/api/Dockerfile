@@ -11,9 +11,6 @@ COPY apps/api/package.json apps/api/
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY packages/ai/package.json packages/ai/
-# Workers dir needed for pnpm-workspace.yaml resolution
-COPY workers/pdf-worker/package.json workers/pdf-worker/
-
 RUN pnpm install --frozen-lockfile
 
 # ─── Stage 2: Copy source & build ───────────────────────────────

@@ -62,18 +62,18 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
 
-  deploy-worker:
-    name: Deploy PDF Worker (Railway Production)
+  deploy-trigger:
+    name: Deploy Trigger.dev Tasks (Production)
     needs: test
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      - name: Setup project
+        uses: ./.github/actions/setup-kratos
 
-      - name: Deploy Worker to Railway
-        run: railway up --service pdf-worker --detach
+      - name: Deploy Trigger.dev tasks
+        run: pnpm exec trigger-cli deploy
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_PRODUCTION_ACCESS_TOKEN }}
