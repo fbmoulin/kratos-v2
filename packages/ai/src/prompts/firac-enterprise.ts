@@ -8,6 +8,9 @@
  * Para minutas de decisão/sentença, usar prompts especialistas separados.
  */
 
+import { resolvePrompt } from './prompt-resolver.js';
+import { PROMPT_KEYS } from './prompt-keys.js';
+
 export interface FiracEnterpriseInput {
   /** Texto extraído dos documentos do processo */
   rawText: string;
@@ -36,13 +39,20 @@ Após completar a análise FIRAC+, elabore minuta de sentença. Estrutura: (1) R
 Ao final da análise FIRAC+, apresente uma tabela comparativa das teses do autor e do réu, organizando: (1) Ponto controvertido, (2) Tese do autor, (3) Tese do réu, (4) Prova de cada lado, (5) Norma aplicável, (6) Avaliação de consistência. Isso facilita a visualização panorâmica do caso.`,
 };
 
+const HARDCODED_FIRAC_PROMPT = `Você é um assistente jurídico institucional especializado em análise processual pelo método FIRAC+ adaptado ao sistema judiciário brasileiro. Sua função é realizar análise objetiva, rigorosa e exaustiva de processos judiciais, extraindo toda informação juridicamente relevante dos documentos fornecidos.
+
+Todas as suas conclusões devem derivar exclusivamente dos documentos fornecidos. Nunca invente citações, números de processo, datas, precedentes ou dados que não constem expressamente nos autos. Quando a informação não estiver disponível, declare: [NÃO CONSTA NOS AUTOS].`;
+
 /**
  * Constrói o prompt FIRAC+ Enterprise v3.0 para análise processual completa.
  *
  * Este é o prompt único para análise jurídica. Para minutas, usar módulos opcionais
  * ou prompts especialistas separados.
+ *
+ * The base system instruction is resolved from DB (if an active version exists)
+ * or falls back to the hardcoded constant above.
  */
-export function buildFiracEnterprisePrompt(input: FiracEnterpriseInput): string {
+export async function buildFiracEnterprisePrompt(input: FiracEnterpriseInput): Promise<string> {
   const ragSection = input.ragContext
     ? `\n<contexto_legal_rag>
 Os seguintes precedentes, súmulas e dispositivos legais foram recuperados do knowledge base e podem ser relevantes para este caso. Utilize-os como referência adicional, mas sempre priorizando o que consta nos documentos do processo.
@@ -63,9 +73,9 @@ Realize a análise FIRAC+ completa mas com ênfase especial em ${input.temaFocad
     }
   }
 
-  return `Você é um assistente jurídico institucional especializado em análise processual pelo método FIRAC+ adaptado ao sistema judiciário brasileiro. Sua função é realizar análise objetiva, rigorosa e exaustiva de processos judiciais, extraindo toda informação juridicamente relevante dos documentos fornecidos.
+  const baseTemplate = await resolvePrompt(PROMPT_KEYS.FIRAC_ENTERPRISE, HARDCODED_FIRAC_PROMPT);
 
-Todas as suas conclusões devem derivar exclusivamente dos documentos fornecidos. Nunca invente citações, números de processo, datas, precedentes ou dados que não constem expressamente nos autos. Quando a informação não estiver disponível, declare: [NÃO CONSTA NOS AUTOS].
+  return `${baseTemplate}
 
 <contexto_operacional>
 JURISDIÇÃO: Brasil — Sistema jurídico romano-germânico

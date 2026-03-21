@@ -1,4 +1,9 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
+
+vi.mock('./prompt-resolver.js', () => ({
+  resolvePrompt: vi.fn((_key: string, fallback: string) => Promise.resolve(fallback)),
+}));
+
 import { buildDrafterXml, getDomainPrompt, DOMAIN_MAP } from './drafter.js';
 import type { FIRACResult, RAGContext } from '@kratos/core';
 
@@ -98,24 +103,24 @@ describe('buildDrafterXml', () => {
 });
 
 describe('getDomainPrompt', () => {
-  test('returns GENERICO prompt for unknown domain', () => {
-    const prompt = getDomainPrompt('unknown_domain');
+  test('returns GENERICO prompt for unknown domain', async () => {
+    const prompt = await getDomainPrompt('unknown_domain');
     expect(prompt).toContain('AGENTE JUDICIAL: GENERICO');
   });
 
-  test('returns specific prompt for mapped domain', () => {
-    const prompt = getDomainPrompt('bancario');
+  test('returns specific prompt for mapped domain', async () => {
+    const prompt = await getDomainPrompt('bancario');
     expect(prompt).toContain('AGENTE JUDICIAL: BANCARIO');
     expect(prompt).toContain('litigios bancarios');
   });
 
-  test('is case-insensitive', () => {
-    const prompt = getDomainPrompt('BANCARIO');
+  test('is case-insensitive', async () => {
+    const prompt = await getDomainPrompt('BANCARIO');
     expect(prompt).toContain('AGENTE JUDICIAL: BANCARIO');
   });
 
-  test('maps civil legalMatter to GENERICO by default', () => {
-    const prompt = getDomainPrompt('civil');
+  test('maps civil legalMatter to GENERICO by default', async () => {
+    const prompt = await getDomainPrompt('civil');
     expect(prompt).toContain('AGENTE JUDICIAL: GENERICO');
   });
 });

@@ -1,16 +1,21 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
+
+vi.mock('./prompt-resolver.js', () => ({
+  resolvePrompt: vi.fn((_key: string, fallback: string) => Promise.resolve(fallback)),
+}));
+
 import { buildRouterPrompt, buildSpecialistPrompt } from './templates.js';
 
 describe('buildRouterPrompt', () => {
-  test('includes extracted text in XML tag', () => {
-    const prompt = buildRouterPrompt('Texto do processo judicial...');
+  test('includes extracted text in XML tag', async () => {
+    const prompt = await buildRouterPrompt('Texto do processo judicial...');
     expect(prompt).toContain('<texto_extraido>');
     expect(prompt).toContain('Texto do processo judicial...');
     expect(prompt).toContain('</texto_extraido>');
   });
 
-  test('instructs JSON output with required fields', () => {
-    const prompt = buildRouterPrompt('qualquer texto');
+  test('instructs JSON output with required fields', async () => {
+    const prompt = await buildRouterPrompt('qualquer texto');
     expect(prompt).toContain('legalMatter');
     expect(prompt).toContain('decisionType');
     expect(prompt).toContain('complexity');
@@ -19,8 +24,8 @@ describe('buildRouterPrompt', () => {
     expect(prompt).toContain('JSON');
   });
 
-  test('lists valid enum values for classification', () => {
-    const prompt = buildRouterPrompt('texto');
+  test('lists valid enum values for classification', async () => {
+    const prompt = await buildRouterPrompt('texto');
     expect(prompt).toContain('liminar');
     expect(prompt).toContain('sentenca');
     expect(prompt).toContain('despacho');

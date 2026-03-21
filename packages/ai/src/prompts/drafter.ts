@@ -1,4 +1,6 @@
 import type { FIRACResult, RAGContext } from '@kratos/core';
+import { resolvePrompt } from './prompt-resolver.js';
+import { PROMPT_KEYS } from './prompt-keys.js';
 
 export interface DrafterXmlInput {
   /** Full raw text extracted from the PDF */
@@ -295,6 +297,12 @@ const LEGAL_MATTER_TO_DOMAIN: Record<string, string> = {
   tax: 'generico',
 };
 
+const DOMAIN_TO_PROMPT_KEY: Record<string, string> = {
+  generico: PROMPT_KEYS.DRAFTER_GENERICO,
+  bancario: PROMPT_KEYS.DRAFTER_BANCARIO,
+  consumidor: PROMPT_KEYS.DRAFTER_CONSUMIDOR,
+};
+
 /**
  * Returns the specialist system prompt for a given domain.
  *
@@ -302,21 +310,20 @@ const LEGAL_MATTER_TO_DOMAIN: Record<string, string> = {
  * 1. Exact match in DOMAIN_MAP (case-insensitive)
  * 2. LegalMatter → domain mapping
  * 3. GENERICO fallback
+ *
+ * The prompt content is resolved from DB (if an active version exists)
+ * or falls back to the hardcoded DOMAIN_MAP constant.
  */
-export function getDomainPrompt(domain: string): string {
+export async function getDomainPrompt(domain: string): Promise<string> {
   const key = domain.toLowerCase();
 
-  // Direct domain match (e.g. "bancario", "consumidor")
-  if (DOMAIN_MAP[key]) {
-    return DOMAIN_MAP[key];
-  }
+  // Resolve domain name (direct or via LegalMatter mapping)
+  const resolvedKey = DOMAIN_MAP[key] ? key
+    : LEGAL_MATTER_TO_DOMAIN[key] ? LEGAL_MATTER_TO_DOMAIN[key]
+    : 'generico';
 
-  // LegalMatter → domain mapping (e.g. "civil" → "generico")
-  const mappedKey = LEGAL_MATTER_TO_DOMAIN[key];
-  if (mappedKey && DOMAIN_MAP[mappedKey]) {
-    return DOMAIN_MAP[mappedKey];
-  }
+  const promptKey = DOMAIN_TO_PROMPT_KEY[resolvedKey] ?? PROMPT_KEYS.DRAFTER_GENERICO;
+  const fallback = DOMAIN_MAP[resolvedKey] ?? DOMAIN_MAP.generico;
 
-  // Fallback
-  return DOMAIN_MAP.generico;
+  return resolvePrompt(promptKey, fallback);
 }

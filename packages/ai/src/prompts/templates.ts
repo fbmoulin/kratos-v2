@@ -5,14 +5,10 @@
  * - Specialist: generates FIRAC analysis with optional RAG context
  */
 
-/**
- * Build the router classification prompt.
- *
- * Instructs the model to output a JSON object with:
- * legalMatter, decisionType, complexity (0-100), confidence (0-1), reasoning.
- */
-export function buildRouterPrompt(text: string): string {
-  return `Voce e um classificador de documentos juridicos brasileiros.
+import { resolvePrompt } from './prompt-resolver.js';
+import { PROMPT_KEYS } from './prompt-keys.js';
+
+const HARDCODED_ROUTER_PROMPT = `Voce e um classificador de documentos juridicos brasileiros.
 
 Analise o texto extraido abaixo e classifique-o retornando APENAS um objeto JSON valido.
 
@@ -21,13 +17,20 @@ Campos obrigatorios:
 - "decisionType": uma das opcoes ["liminar", "sentenca", "despacho", "acordao"]
 - "complexity": numero inteiro de 0 a 100 indicando a complexidade do caso
 - "confidence": numero de 0 a 1 indicando sua confianca na classificacao
-- "reasoning": breve justificativa da classificacao (1-2 frases)
+- "reasoning": breve justificativa da classificacao (1-2 frases)`;
 
-<texto_extraido>
-${text}
-</texto_extraido>
-
-Responda APENAS com o objeto JSON, sem texto adicional.`;
+/**
+ * Build the router classification prompt.
+ *
+ * Instructs the model to output a JSON object with:
+ * legalMatter, decisionType, complexity (0-100), confidence (0-1), reasoning.
+ *
+ * The base template is resolved from DB (if an active version exists) or
+ * falls back to the hardcoded constant above.
+ */
+export async function buildRouterPrompt(text: string): Promise<string> {
+  const template = await resolvePrompt(PROMPT_KEYS.ROUTER, HARDCODED_ROUTER_PROMPT);
+  return `${template}\n\n<texto_extraido>\n${text}\n</texto_extraido>\n\nResponda APENAS com o objeto JSON, sem texto adicional.`;
 }
 
 export interface SpecialistPromptInput {

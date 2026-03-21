@@ -1,4 +1,9 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
+
+vi.mock('./prompt-resolver.js', () => ({
+  resolvePrompt: vi.fn((_key: string, fallback: string) => Promise.resolve(fallback)),
+}));
+
 import { buildFiracEnterprisePrompt } from './firac-enterprise.js';
 
 describe('buildFiracEnterprisePrompt', () => {
@@ -8,8 +13,8 @@ describe('buildFiracEnterprisePrompt', () => {
     decisionType: 'sentenca',
   };
 
-  test('includes all 7 FIRAC+ phases', () => {
-    const prompt = buildFiracEnterprisePrompt(baseInput);
+  test('includes all 7 FIRAC+ phases', async () => {
+    const prompt = await buildFiracEnterprisePrompt(baseInput);
     expect(prompt).toContain('FASE 1');
     expect(prompt).toContain('FASE 2');
     expect(prompt).toContain('FASE 3');
@@ -19,8 +24,8 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('FASE 7');
   });
 
-  test('includes anti-hallucination rules and document anchoring', () => {
-    const prompt = buildFiracEnterprisePrompt(baseInput);
+  test('includes anti-hallucination rules and document anchoring', async () => {
+    const prompt = await buildFiracEnterprisePrompt(baseInput);
     expect(prompt).toContain('regras_inviolaveis');
     expect(prompt).toContain('FIDELIDADE DOCUMENTAL');
     expect(prompt).toContain('ANTI-ALUCINAÇÃO');
@@ -28,23 +33,23 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('VERIFICAR');
   });
 
-  test('includes CNJ compliance context', () => {
-    const prompt = buildFiracEnterprisePrompt(baseInput);
+  test('includes CNJ compliance context', async () => {
+    const prompt = await buildFiracEnterprisePrompt(baseInput);
     expect(prompt).toContain('CNJ 332/2020');
     expect(prompt).toContain('CNJ 615/2025');
     expect(prompt).toContain('LGPD');
     expect(prompt).toContain('NUNCA substituição da decisão humana');
   });
 
-  test('wraps document text in XML tags', () => {
-    const prompt = buildFiracEnterprisePrompt(baseInput);
+  test('wraps document text in XML tags', async () => {
+    const prompt = await buildFiracEnterprisePrompt(baseInput);
     expect(prompt).toContain('<documentos_do_processo>');
     expect(prompt).toContain('ação de indenização');
     expect(prompt).toContain('</documentos_do_processo>');
   });
 
-  test('includes legal matter and decision type in context', () => {
-    const prompt = buildFiracEnterprisePrompt({
+  test('includes legal matter and decision type in context', async () => {
+    const prompt = await buildFiracEnterprisePrompt({
       ...baseInput,
       legalMatter: 'labor',
       decisionType: 'liminar',
@@ -53,8 +58,8 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('TIPO_DECISÃO: liminar');
   });
 
-  test('injects RAG context when provided', () => {
-    const prompt = buildFiracEnterprisePrompt({
+  test('injects RAG context when provided', async () => {
+    const prompt = await buildFiracEnterprisePrompt({
       ...baseInput,
       ragContext: 'Súmula 297 STJ: O CDC é aplicável às instituições financeiras.',
     });
@@ -63,13 +68,13 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('</contexto_legal_rag>');
   });
 
-  test('omits RAG section when no context provided', () => {
-    const prompt = buildFiracEnterprisePrompt(baseInput);
+  test('omits RAG section when no context provided', async () => {
+    const prompt = await buildFiracEnterprisePrompt(baseInput);
     expect(prompt).not.toContain('<contexto_legal_rag>');
   });
 
-  test('activates liminar module', () => {
-    const prompt = buildFiracEnterprisePrompt({
+  test('activates liminar module', async () => {
+    const prompt = await buildFiracEnterprisePrompt({
       ...baseInput,
       modulo: 'liminar',
     });
@@ -78,8 +83,8 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('art. 300 do CPC');
   });
 
-  test('activates sentenca module', () => {
-    const prompt = buildFiracEnterprisePrompt({
+  test('activates sentenca module', async () => {
+    const prompt = await buildFiracEnterprisePrompt({
       ...baseInput,
       modulo: 'sentenca',
     });
@@ -87,8 +92,8 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('art. 489, §1º do CPC');
   });
 
-  test('activates analise_focada module with tema', () => {
-    const prompt = buildFiracEnterprisePrompt({
+  test('activates analise_focada module with tema', async () => {
+    const prompt = await buildFiracEnterprisePrompt({
       ...baseInput,
       modulo: 'analise_focada',
       temaFocado: 'responsabilidade civil',
@@ -97,8 +102,8 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('correntes doutrinárias');
   });
 
-  test('activates comparacao_teses module', () => {
-    const prompt = buildFiracEnterprisePrompt({
+  test('activates comparacao_teses module', async () => {
+    const prompt = await buildFiracEnterprisePrompt({
       ...baseInput,
       modulo: 'comparacao_teses',
     });
@@ -106,8 +111,8 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('tabela comparativa');
   });
 
-  test('includes key FIRAC sections: fatos, questões, regras, análise, conclusão', () => {
-    const prompt = buildFiracEnterprisePrompt(baseInput);
+  test('includes key FIRAC sections: fatos, questões, regras, análise, conclusão', async () => {
+    const prompt = await buildFiracEnterprisePrompt(baseInput);
     expect(prompt).toContain('INVENTÁRIO FÁTICO');
     expect(prompt).toContain('QUESTÕES JURÍDICAS');
     expect(prompt).toContain('DIREITO APLICÁVEL');
@@ -116,8 +121,8 @@ describe('buildFiracEnterprisePrompt', () => {
     expect(prompt).toContain('VALIDAÇÃO E CERTIFICAÇÃO');
   });
 
-  test('includes tutela de urgência analysis criteria', () => {
-    const prompt = buildFiracEnterprisePrompt(baseInput);
+  test('includes tutela de urgência analysis criteria', async () => {
+    const prompt = await buildFiracEnterprisePrompt(baseInput);
     expect(prompt).toContain('Tutela de Urgência');
     expect(prompt).toContain('Probabilidade do direito');
     expect(prompt).toContain('perigo de dano');
