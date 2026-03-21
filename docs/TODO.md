@@ -157,8 +157,10 @@ All 23 tasks completed per CHANGELOG v2.5.0:
 ### Fase A: Separação da extração legada — DONE
 - [x] Migração do código Python de extração para `workers/trigger/extraction/` (pacote self-contained)
 - [x] `pdf_runner.py` importa de `extraction.pipeline` (sem dependência de `workers/pdf-worker/`)
-- [x] `workers/pdf-worker/` marcado como safe-to-delete (DEPRECATED.md atualizado)
+- [x] `workers/pdf-worker/` removido (era archived reference, deletado definitivamente)
+- [x] Referências removidas de Dockerfile, docker-compose, CI workflows, PROJECT_INDEX
 - [x] `requirements.txt` adicionado em `workers/trigger/`
+- [x] `schemaVersion` adicionado ao contrato de extração (v1.2.0)
 
 ### Fase B: Deduplicação simétrica — DONE (já implementado)
 - [x] Dedup por hash na rota `/v2/ingest` (base64 e URL)

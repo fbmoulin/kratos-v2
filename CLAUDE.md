@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **KRATOS v2** is a legal automation platform for Brazilian judiciary that analyzes judicial PDFs, extracts information using AI agents (LangGraph), applies the FIRAC framework (Facts, Issue, Rule, Analysis, Conclusion), and generates high-quality legal document drafts with human-in-the-loop validation. The system is built for compliance with CNJ Resolution 615/2025 and LGPD.
 
-**Stack**: Turborepo monorepo, TypeScript, React 19, Hono API, PostgreSQL (Supabase), pgvector, Drizzle ORM, LangGraph, Redis/Celery, Vite, Tailwind CSS 4.
+**Stack**: Turborepo monorepo, TypeScript, React 19, Hono API, PostgreSQL (Supabase), pgvector, Drizzle ORM, LangGraph, Trigger.dev, Redis, Vite, Tailwind CSS 4.
 
 ## Development Commands
 
@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies (requires pnpm 9+, Node 22+)
 pnpm install
 
-# Start infrastructure (Redis for cache + Celery broker)
+# Start infrastructure (Redis for cache)
 docker-compose up -d
 
 # Configure environment variables
@@ -104,17 +104,18 @@ packages/
 └── tools/        # Utilities (PDF extractor, DOCX generator)
 
 workers/
-└── pdf-worker/   # Python/Celery async worker
-                  # Hybrid extraction: Docling + pdfplumber + Gemini 2.5 Flash
-                  # Consumes jobs from Redis queue
+└── trigger/      # Trigger.dev tasks (official pipeline)
+                  # PDF extraction (Python subprocess), AI analysis, DOCX export
+                  # extraction/ subdir: self-contained Python pdfplumber package
 ```
 
 ### Key Architectural Patterns
 
 **1. Async Job Processing**
-- API receives PDF upload → saves to Supabase Storage → enqueues job to Redis
-- Celery worker consumes job → hybrid PDF extraction pipeline → saves to `extractions` table
-- Frontend polls or receives webhooks for status updates
+- API receives PDF upload → saves to Supabase Storage → enqueues Trigger.dev task
+- Trigger.dev `pdf-extraction` task → Python subprocess (pdfplumber) → saves to `extractions` table
+- Trigger.dev `analysis-job` task → LangGraph pipeline → saves to `analyses` table
+- Frontend polls for status updates
 
 **2. LangGraph Agent Orchestration**
 - Supervisor agent routes to complexity-appropriate flow
@@ -143,10 +144,10 @@ workers/
 Critical env vars (see `.env.example` and `docs/ENV.md`):
 - `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` - Database + Auth + Storage
 - `DATABASE_URL` - Direct Postgres connection (Drizzle ORM)
-- `REDIS_URL` - Cache + Celery broker
+- `REDIS_URL` - Cache + dev fallback queues
 - `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY` - AI models
-- `LANGSMITH_API_KEY` - Agent tracing and debugging
-- `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` - Worker queue
+- `LANGSMITH_API_KEY` - Agent tracing and debugging (LangSmith integrated)
+- `TRIGGER_SECRET_KEY`, `TRIGGER_ACCESS_TOKEN` - Trigger.dev task queue
 - `TEST_USER_ID` - Dev-only auth bypass for E2E testing (UUID)
 
 ### Security & Compliance
@@ -172,10 +173,11 @@ Critical env vars (see `.env.example` and `docs/ENV.md`):
 - Test with LangSmith tracing enabled to debug agent decision chains
 
 ### When Working with PDFs
-- PDF processing happens in Python worker (`workers/pdf-worker/`)
-- Extraction pipeline: Docling (primary) → pdfplumber (tables) → Gemini 2.5 Flash (images)
-- Results validated via Pydantic schemas before database insertion
-- Large PDFs may timeout - consider chunking strategy for production
+- PDF extraction runs via Trigger.dev task (`workers/trigger/src/pdf.ts`)
+- Python extraction code lives in `workers/trigger/extraction/` (self-contained package)
+- Pipeline: pdfplumber text + tables → JSON stdout → Zod validation → DB persistence
+- Provenance tracked: fileHash, contentHash, extractionMethod, processingTimeMs, schemaVersion
+- Large PDFs have 5-minute timeout; max 500 pages per config
 
 ### When Building UI
 - Use shadcn/ui components (not custom implementations)
@@ -190,7 +192,7 @@ Critical env vars (see `.env.example` and `docs/ENV.md`):
 - `docs/ENV.md` - Complete environment variable reference
 - `docs/ROADMAP.md` - Development phases and timeline
 - `docs/SECURITY.md` - Security practices and threat model
-- `docs/DEPLOY.md` - Deployment procedures (Vercel/Fly.io)
+- `docs/DEPLOY.md` - Deployment procedures (Vercel/Railway/Trigger.dev)
 
 ### When Writing Tests
 - API tests must mock `@supabase/supabase-js` before importing app (singleton creates at module load)
@@ -202,8 +204,8 @@ Critical env vars (see `.env.example` and `docs/ENV.md`):
 
 GitHub Actions workflows (`.github/workflows/`):
 - **CI** (`ci.yml`): On push/PR to `main`/`develop` — build, lint, test:coverage (Vitest v8), upload coverage artifacts
-- **Deploy Staging** (`deploy-staging.yml`): On push to `main` — Vercel (web) + Fly.io (api) auto-deploy
-- **Deploy Production** (`deploy-production.yml`): On tag `v*` — pre-deploy tests, manual approval via GitHub environment, then Vercel --prod + Fly.io
+- **Deploy Staging** (`deploy-staging.yml`): On push to `main` — Vercel (web) + Railway (api) + Trigger.dev (tasks)
+- **Deploy Production** (`deploy-production.yml`): On tag `v*` — pre-deploy tests, manual approval, then Vercel --prod + Railway + Trigger.dev
 - **Integration** (`integration.yml`): Nightly/manual — docker-compose (Postgres + Redis), DB push, API + worker, full test suite
 
 ### Seed & E2E Scripts
@@ -235,10 +237,10 @@ npx supabase stop
 
 ### Docker Services
 ```bash
-# Redis only (default)
+# Redis only (default — PDF extraction uses Trigger.dev, not Docker)
 docker compose up -d
 
-# Redis + PDF Worker
+# Redis + DOCX Worker (dev fallback only)
 docker compose --profile worker up -d
 ```
 
@@ -251,12 +253,12 @@ docker compose --profile worker up -d
 
 | Package | Tests | Suites | Notes |
 |---------|-------|--------|-------|
-| `@kratos/ai` | 70 | 15 | prompts, graph nodes, RAG, router, providers, workflow |
+| `@kratos/ai` | 90 | 19 | prompts, graph nodes, RAG, router, providers, workflow |
 | `@kratos/web` | 28 | 9 | Login, Dashboard, Review, components, hooks |
-| `@kratos/api` | 24 | 5 | health, documents CRUD, auth, storage, queue, analysis, review |
-| `@kratos/db` | 31 | 8 | schema validation (tables, columns, constraints, types) |
-| `@kratos/core` | 18 | 2 | enums, constants, types |
-| **Total** | **171+** | **39** | Coverage via Vitest v8, thresholds enforced in CI |
+| `@kratos/api` | 75 | 10 | health, documents CRUD, auth, storage, queue, analysis, review, ingestion |
+| `@kratos/db` | 31 | 1 | schema validation (tables, columns, constraints, types) |
+| `@kratos/core` | 37 | 4 | enums, constants, types, schemas (extraction, ingestion, prompt-validation) |
+| **Total** | **261+** | **43** | Coverage via Vitest v8, thresholds enforced in CI |
 
 ## Database Schema (Supabase Postgres + pgvector)
 

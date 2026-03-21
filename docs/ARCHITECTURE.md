@@ -44,7 +44,7 @@ kratos-v2/
 └── pnpm-workspace.yaml   # Workspace definitions
 ```
 
-> **Note:** PDF extraction Python code lives in `workers/trigger/extraction/` as a self-contained package, called via `pdf_runner.py` subprocess. The legacy `workers/pdf-worker/` is archived reference only — see `workers/pdf-worker/DEPRECATED.md`.
+> **Note:** PDF extraction Python code lives in `workers/trigger/extraction/` as a self-contained package, called via `pdf_runner.py` subprocess. The legacy `workers/pdf-worker/` has been removed (was archived reference only since v2.6.0).
 
 ---
 
