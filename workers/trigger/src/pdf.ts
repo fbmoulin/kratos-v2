@@ -65,6 +65,7 @@ export async function runPdfJob(payload: PdfPayload): Promise<void> {
       fileHash: pdfHash ?? result.fileHash ?? null,
       contentHash,
       processingTimeMs,
+      schemaVersion: result.schemaVersion ?? '1.2.0',
     });
 
     // Update document status + page count

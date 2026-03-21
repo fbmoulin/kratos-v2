@@ -117,6 +117,8 @@ export const extractions = pgTable(
     contentHash: varchar('content_hash', { length: 64 }),
     /** Wall-clock processing time in milliseconds (provenance v1.1.0) */
     processingTimeMs: integer('processing_time_ms'),
+    /** Schema version of the extraction output contract (provenance v1.2.0) */
+    schemaVersion: varchar('schema_version', { length: 20 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('idx_extractions_document_id').on(table.documentId)],

@@ -47,6 +47,7 @@ def main() -> None:
             "pageCount": result.metadata.total_pages,
             "extractionMethod": result.metadata.extraction_method.value,
             "contentJson": {"pages": pages},
+            "schemaVersion": "1.2.0",
         }))
 
     except PipelineError as e:

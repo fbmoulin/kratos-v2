@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 /**
- * Official contract for PDF extraction pipeline output (v1.1.0).
+ * Official contract for PDF extraction pipeline output (v1.2.0).
  * Validated at the boundary between Python subprocess (pdf_runner.py)
  * and TypeScript consumer (workers/trigger/src/pdf.ts).
  *
  * v1.1.0 additions: fileHash, contentHash, processingTimeMs for
  * provenance tracking and idempotency.
+ * v1.2.0 additions: schemaVersion for forward-compatible evolution.
  */
 export const ExtractionOutputSchema = z.object({
   status: z.enum(['completed', 'failed']),
@@ -22,6 +23,8 @@ export const ExtractionOutputSchema = z.object({
   contentHash: z.string().length(64).optional(),
   /** Wall-clock processing time in milliseconds */
   processingTimeMs: z.number().int().min(0).optional(),
+  /** Schema version of this extraction output (e.g., "1.2.0") */
+  schemaVersion: z.string().optional(),
 });
 
 export type ExtractionOutput = z.infer<typeof ExtractionOutputSchema>;

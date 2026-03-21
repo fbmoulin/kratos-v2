@@ -95,6 +95,8 @@ export interface Extraction {
   contentHash: string | null;
   /** Wall-clock processing time in milliseconds (provenance v1.1.0) */
   processingTimeMs: number | null;
+  /** Schema version of the extraction output contract (provenance v1.2.0) */
+  schemaVersion: string | null;
   createdAt: Date;
 }
 
