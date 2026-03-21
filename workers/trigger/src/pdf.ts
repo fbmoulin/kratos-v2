@@ -1,5 +1,6 @@
 import { schemaTask } from "@trigger.dev/sdk/v3";
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { execa } from "execa";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,13 +19,15 @@ export const PdfPayloadSchema = z.object({
   userId: z.string().uuid(),
   filePath: z.string().min(1),
   fileName: z.string().min(1),
+  /** SHA-256 of the uploaded PDF for provenance tracking */
+  pdfHash: z.string().length(64).optional(),
 });
 
 export type PdfPayload = z.infer<typeof PdfPayloadSchema>;
 
 /** Pure function — testable without Trigger.dev runtime */
 export async function runPdfJob(payload: PdfPayload): Promise<void> {
-  const { documentId, userId, filePath } = payload;
+  const { documentId, userId, filePath, pdfHash } = payload;
   const startMs = Date.now();
 
   try {
@@ -48,13 +51,20 @@ export async function runPdfJob(payload: PdfPayload): Promise<void> {
       throw new Error(result.error ?? "Python pipeline returned failed status");
     }
 
-    // Save extraction to DB
+    const processingTimeMs = Date.now() - startMs;
+    const rawText = result.rawText ?? "";
+    const contentHash = createHash("sha256").update(rawText).digest("hex");
+
+    // Save extraction to DB with provenance fields (v1.1.0)
     await db.insert(extractions).values({
       documentId,
-      rawText: result.rawText ?? "",
+      rawText,
       tablesCount: result.tablesCount ?? 0,
       extractionMethod: result.extractionMethod ?? "pdfplumber",
       contentJson: result.contentJson ?? {},
+      fileHash: pdfHash ?? result.fileHash ?? null,
+      contentHash,
+      processingTimeMs,
     });
 
     // Update document status + page count
@@ -63,8 +73,10 @@ export async function runPdfJob(payload: PdfPayload): Promise<void> {
       .set({ status: "completed", pages: result.pageCount ?? null, updatedAt: new Date() })
       .where(eq(documents.id, documentId));
 
-    const latencyMs = Date.now() - startMs;
-    logger.info({ documentId, latencyMs, pages: result.pageCount }, "PDF extraction complete");
+    logger.info(
+      { documentId, processingTimeMs, pages: result.pageCount, fileHash: pdfHash },
+      "PDF extraction complete",
+    );
   } catch (err) {
     const latencyMs = Date.now() - startMs;
     logger.error({ err, documentId, latencyMs }, "PDF extraction failed");

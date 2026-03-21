@@ -7,6 +7,7 @@ import { triggerService } from '../services/trigger.js';
 import { documentRepo } from '../services/document-repo.js';
 import { auditRepo } from '../services/audit-repo.js';
 import { rateLimiter } from '../middleware/rate-limit.js';
+import { validateIngestionUrl, FETCH_CONFIG } from '../services/url-validator.js';
 
 const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46]; // %PDF
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -43,11 +44,48 @@ ingestionRouter.post('/', rateLimiter(RATE_LIMITS.UPLOAD_PER_MINUTE), async (c) 
   if (pdfBase64) {
     fileBuffer = Buffer.from(pdfBase64, 'base64');
   } else if (pdfUrl) {
-    const res = await fetch(pdfUrl);
-    if (!res.ok) {
-      return c.json({ error: { message: `Failed to download PDF from URL: ${res.status}` } }, 400);
+    // SSRF protection: validate URL before fetching
+    const urlValidation = validateIngestionUrl(pdfUrl);
+    if (!urlValidation.valid) {
+      return c.json({ error: { message: `URL rejected: ${urlValidation.error}` } }, 400);
     }
-    fileBuffer = Buffer.from(await res.arrayBuffer());
+
+    // Fetch with timeout and no redirects
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_CONFIG.TIMEOUT_MS);
+
+    try {
+      const res = await fetch(pdfUrl, {
+        signal: controller.signal,
+        redirect: 'error', // Block redirects to prevent SSRF via redirect
+        headers: { Accept: 'application/pdf' },
+      });
+
+      if (!res.ok) {
+        return c.json({ error: { message: `Failed to download PDF from URL: ${res.status}` } }, 400);
+      }
+
+      // Validate Content-Length before downloading body
+      const contentLength = parseInt(res.headers.get('content-length') ?? '0', 10);
+      if (contentLength > FETCH_CONFIG.MAX_CONTENT_LENGTH) {
+        return c.json({ error: { message: 'Remote PDF exceeds 50MB size limit' } }, 400);
+      }
+
+      // Validate Content-Type
+      const contentType = res.headers.get('content-type') ?? '';
+      if (!contentType.includes('application/pdf') && !contentType.includes('application/octet-stream')) {
+        return c.json({ error: { message: `Remote URL did not return a PDF (Content-Type: ${contentType})` } }, 400);
+      }
+
+      fileBuffer = Buffer.from(await res.arrayBuffer());
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        return c.json({ error: { message: 'PDF download timed out' } }, 400);
+      }
+      return c.json({ error: { message: `Failed to download PDF: ${(err as Error).message}` } }, 400);
+    } finally {
+      clearTimeout(timeout);
+    }
   } else {
     return c.json({ error: { message: 'Either pdfBase64 or pdfUrl must be provided' } }, 400);
   }

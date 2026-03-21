@@ -7,6 +7,58 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/spec/v2.0.
 
 ---
 
+## [2.8.0] - 2026-03-21 — Beta Institucional (Fases A-E)
+
+### Adicionado
+
+#### Fase A: Extração Sem Legado
+- **ExtractionOutputSchema v1.1.0:** Campos `fileHash`, `contentHash`, `processingTimeMs` para proveniência
+- **Contratos DedupeCheckRequest/Response:** Tipos formais para deduplicação em `@kratos/core`
+- **Colunas de proveniência:** `file_hash`, `content_hash`, `processing_time_ms` na tabela `extractions`
+- **Colunas de governança:** `prompt_key`, `prompt_version`, `prompt_hash` na tabela `analyses`
+- **Colunas de lifecycle:** `status`, `content_hash` na tabela `prompt_versions`
+- **Migration SQL:** `0001_add_provenance_columns.sql`
+- **PDF task refatorado:** `pdf.ts` agora computa `contentHash` e persiste todos os campos v1.1.0
+- **pdf-worker ARCHIVED:** Marcado como arquivo histórico, não usado em runtime
+
+#### Fase B: Deduplicação Simétrica
+- **Dedup idêntica:** Upload manual e ingestão externa usam a mesma lógica SHA-256 per-user
+- **idempotencyKey:** Hash do PDF enviado ao Trigger.dev para evitar processamento duplicado
+- **Documentação atualizada:** `lex-intelligentia.md` com política de dedup detalhada
+
+#### Fase C: Governança de Prompts
+- **Prompt resolver endurecido:** Sem fallback silencioso em produção/staging — lança erro controlado
+- **resolvePromptWithMetadata():** Retorna key, version, contentHash, source para audit trail
+- **Lifecycle de prompts:** Estados `draft → approved → active → rolled_back`
+- **contentHash automático:** SHA-256 computado ao criar prompt version
+- **prompt-repo.validate():** Verifica integridade do prompt ativo
+- **Endpoints:** `POST /v2/prompts/:key/validate`, `POST /v2/prompts/:key/activate/:version`
+- **Análise com proveniência:** `promptKey`, `promptVersion`, `promptHash` registrados em cada análise
+- **Contratos:** `PromptValidationRequest/Response` em `@kratos/core`
+- **Documentação:** `docs/prompt-governance.md`
+
+#### Fase D: Proteção SSRF e Saneamento
+- **url-validator.ts:** Validação completa de URLs para ingestão de PDFs
+- **Bloqueio SSRF:** IPs privados, localhost, URLs sem HTTPS, credenciais embutidas
+- **URL_INGESTION_ALLOWLIST:** Allowlist configurável via .env
+- **Fetch seguro:** Timeout 30s, sem redirecionamentos, validação Content-Type/Content-Length
+- **SECURITY.md atualizado:** Seção 3.2.1 sobre proteção SSRF
+- **Testes unitários:** 12 testes para url-validator
+
+#### Fase E: Convergência Documental
+- **ARCHITECTURE.md:** LangSmith corrigido para "implementado" (não "planned")
+- **ARCHITECTURE.md:** Redis BRPOP workers marcados como "Development Fallback Only"
+- **Tracing expandido:** Campos fileHash, contentHash, promptHash, extractionMethod no tracing config
+- **Checklist go/no-go:** `docs/BETA_CHECKLIST.md` com critérios formais de liberação
+- **Interfaces atualizadas:** `Extraction`, `Analysis`, `PromptVersion` com campos de proveniência
+
+### Alterado
+- `ExtractionOutputSchema` expandido com 3 novos campos opcionais (backwards-compatible)
+- `PromptVersion` interface expandida com `status` e `contentHash`
+- `Analysis` interface expandida com `promptKey`, `promptVersion`, `promptHash`
+
+---
+
 ## [2.7.0] - 2026-03-21 — Release Readiness + Lex Adapter (Sprints 5+6)
 
 ### Adicionado

@@ -41,6 +41,19 @@ Implementamos múltiplas camadas de segurança diretamente na aplicação para p
 
 - **Validação Rigorosa**: Todas as entradas de API e os outputs gerados pelos agentes de IA são rigorosamente validados usando esquemas **Pydantic** (no backend Python) e **Zod** (no frontend TypeScript). Isso previne uma vasta gama de vulnerabilidades, incluindo injeção de dados e corrupção de estado.
 
+### 3.2.1. Proteção SSRF (Server-Side Request Forgery)
+
+A rota `/v2/ingest` aceita URLs para download de PDFs. Para prevenir ataques SSRF:
+
+- **Allowlist de domínios**: A variável `URL_INGESTION_ALLOWLIST` define os domínios permitidos para download. Se configurada, apenas URLs nesses domínios são aceitas.
+- **Bloqueio de IPs privados**: URLs apontando para IPs privados (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, ::1, etc.) são rejeitadas.
+- **HTTPS obrigatório**: Apenas URLs com protocolo HTTPS são aceitas.
+- **Sem redirecionamentos**: O fetch é configurado com `redirect: 'error'` para bloquear redirecionamentos que poderiam contornar a validação.
+- **Validação de Content-Type**: O servidor remoto deve retornar `application/pdf` ou `application/octet-stream`.
+- **Validação de Content-Length**: O tamanho do arquivo é verificado antes do download completo.
+- **Timeout**: O download é abortado após 30 segundos.
+- **Sem credenciais embutidas**: URLs com username/password são rejeitadas.
+
 ### 3.3. Human-in-the-Loop (HITL)
 
 - **Mitigação de Alucinações de IA**: Reconhecendo os riscos de ""alucinações"" em modelos de linguagem, a plataforma exige uma etapa de revisão humana **obrigatória** (Human-in-the-Loop) antes que qualquer minuta jurídica possa ser finalizada e exportada. Isso garante que um profissional qualificado valide a precisão e a adequação do documento gerado.

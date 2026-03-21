@@ -61,12 +61,26 @@ Lex-Intelligentia is an **external adapter** — it sends documents to KRATOS vi
 - `400` — Invalid payload (missing PDF, bad URL, etc.)
 - `401` — Missing or invalid auth token
 
+## Deduplication Policy
+
+Both `/v2/documents` (manual upload) and `/v2/ingest` (external ingestion) implement **identical SHA-256 per-user deduplication**:
+
+1. PDF content is hashed with SHA-256 (`pdfHash`)
+2. The hash is checked against existing documents for the same user (`documentRepo.findByHash`)
+3. If a match is found with status `completed` or `processing`, the existing document and extraction are returned with `deduplicated: true`
+4. The `pdfHash` is also sent to Trigger.dev as `idempotencyKey` to prevent duplicate extraction jobs
+
+**To force re-extraction** of a previously processed PDF, delete the existing document first via the API, then re-upload.
+
+**Contracts:** See `DedupeCheckRequest` and `DedupeCheckResponse` in `@kratos/core` for the formal dedup contract types.
+
 ## Security Model
 
 - **Authentication:** Supabase JWT (same as all routes). Lex must obtain a valid token.
 - **Rate limiting:** Standard `UPLOAD_PER_MINUTE` limit (10/min per user)
 - **Audit logging:** Every ingestion creates an audit log entry with `action: 'ingest'` and the `source` field
 - **PDF validation:** Magic bytes check (%PDF header), 50MB size limit
+- **SSRF protection:** URL ingestion validates against `URL_INGESTION_ALLOWLIST` (see SECURITY.md)
 
 ## Design Principles
 

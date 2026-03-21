@@ -1,6 +1,6 @@
 import { schemaTask } from "@trigger.dev/sdk/v3";
 import { z } from "zod";
-import { createAnalysisWorkflow, createInitialState, buildTracingConfig } from "@kratos/ai";
+import { createAnalysisWorkflow, createInitialState, buildTracingConfig, resolvePromptWithMetadata, PROMPT_KEYS } from "@kratos/ai";
 import { db, analyses, documents } from "@kratos/db";
 import { eq } from "drizzle-orm";
 import pino from "pino";
@@ -22,6 +22,12 @@ export async function runAnalysisJob(payload: AnalysisPayload): Promise<void> {
   const { documentId, userId, extractionId, rawText } = payload;
 
   try {
+    // Resolve prompt metadata for governance audit trail
+    const promptMeta = await resolvePromptWithMetadata(
+      PROMPT_KEYS.FIRAC_ENTERPRISE,
+      '', // fallback not used in prod — resolver throws on failure
+    ).catch(() => null);
+
     const workflow = createAnalysisWorkflow();
     const initialState = createInitialState({ extractionId, documentId, userId, rawText });
     const tracingConfig = buildTracingConfig('analysis-pipeline', {
@@ -46,6 +52,10 @@ export async function runAnalysisJob(payload: AnalysisPayload): Promise<void> {
       tokensInput: finalState.tokensInput ?? 0,
       tokensOutput: finalState.tokensOutput ?? 0,
       latencyMs,
+      // Prompt governance: record which prompt was used
+      promptKey: promptMeta?.promptKey ?? null,
+      promptVersion: promptMeta?.version ?? null,
+      promptHash: promptMeta?.contentHash ?? null,
     });
 
     await db
@@ -53,7 +63,13 @@ export async function runAnalysisJob(payload: AnalysisPayload): Promise<void> {
       .set({ status: "completed", updatedAt: new Date() })
       .where(eq(documents.id, documentId));
 
-    logger.info({ documentId, latencyMs, model: finalState.modelUsed }, "Analysis complete");
+    logger.info(
+      {
+        documentId, latencyMs, model: finalState.modelUsed,
+        promptKey: promptMeta?.promptKey, promptVersion: promptMeta?.version,
+      },
+      "Analysis complete",
+    );
   } catch (err) {
     const latencyMs = Date.now() - startMs;
     logger.error({ err, documentId, latencyMs }, "Analysis failed");

@@ -89,6 +89,12 @@ export interface Extraction {
   documentId: string;
   contentJson: Record<string, unknown>;
   extractionMethod: string;
+  /** SHA-256 of the original PDF file (provenance v1.1.0) */
+  fileHash: string | null;
+  /** SHA-256 of the extracted raw text (provenance v1.1.0) */
+  contentHash: string | null;
+  /** Wall-clock processing time in milliseconds (provenance v1.1.0) */
+  processingTimeMs: number | null;
   createdAt: Date;
 }
 
@@ -100,6 +106,12 @@ export interface Analysis {
   reasoningTrace: string;
   resultJson: Record<string, unknown>;
   modelUsed: AIModel;
+  /** Prompt governance: key used for this analysis */
+  promptKey: string | null;
+  /** Prompt governance: version number */
+  promptVersion: number | null;
+  /** Prompt governance: SHA-256 of prompt content */
+  promptHash: string | null;
   createdAt: Date;
 }
 
@@ -125,6 +137,14 @@ export interface Precedent {
   category: LegalMatter;
 }
 
+/** Lifecycle states for prompt versions. */
+export enum PromptStatus {
+  DRAFT = 'draft',
+  APPROVED = 'approved',
+  ACTIVE = 'active',
+  ROLLED_BACK = 'rolled_back',
+}
+
 /** Versioned prompt template for AI agent instructions. */
 export interface PromptVersion {
   id: string;
@@ -132,6 +152,10 @@ export interface PromptVersion {
   version: number;
   content: string;
   isActive: boolean;
+  /** Lifecycle: draft → approved → active → rolled_back */
+  status: PromptStatus;
+  /** SHA-256 of prompt content for integrity verification */
+  contentHash: string | null;
   createdAt: Date;
 }
 
@@ -192,15 +216,28 @@ export interface RAGContext {
 // Schemas
 // ============================================================
 
-export { ExtractionOutputSchema, type ExtractionOutput } from './schemas/extraction.js';
+export {
+  ExtractionOutputSchema,
+  type ExtractionOutput,
+  DedupeCheckRequestSchema,
+  type DedupeCheckRequest,
+  DedupeCheckResponseSchema,
+  type DedupeCheckResponse,
+} from './schemas/extraction.js';
 export { IngestionPayloadSchema, type IngestionPayload } from './schemas/ingestion.js';
+export {
+  PromptValidationRequestSchema,
+  type PromptValidationRequest,
+  PromptValidationResponseSchema,
+  type PromptValidationResponse,
+} from './schemas/prompt-validation.js';
 
 // ============================================================
 // Constants
 // ============================================================
 
 export const APP_NAME = 'KRATOS v2';
-export const APP_VERSION = '2.7.0';
+export const APP_VERSION = '2.8.0';
 
 /** Cache TTL values in seconds for Redis/CDN caching strategies. */
 export const CACHE_TTL = {

@@ -111,6 +111,12 @@ export const extractions = pgTable(
     rawText: text('raw_text'),
     tablesCount: integer('tables_count').default(0),
     imagesCount: integer('images_count').default(0),
+    /** SHA-256 of the original PDF file (provenance v1.1.0) */
+    fileHash: varchar('file_hash', { length: 64 }),
+    /** SHA-256 of the extracted raw text (provenance v1.1.0) */
+    contentHash: varchar('content_hash', { length: 64 }),
+    /** Wall-clock processing time in milliseconds (provenance v1.1.0) */
+    processingTimeMs: integer('processing_time_ms'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('idx_extractions_document_id').on(table.documentId)],
@@ -140,6 +146,12 @@ export const analyses = pgTable(
     tokensInput: integer('tokens_input').default(0),
     tokensOutput: integer('tokens_output').default(0),
     latencyMs: integer('latency_ms').default(0),
+    /** Prompt governance: key used for this analysis (e.g. 'firac-enterprise') */
+    promptKey: varchar('prompt_key', { length: 100 }),
+    /** Prompt governance: version number of the prompt used */
+    promptVersion: integer('prompt_version'),
+    /** Prompt governance: SHA-256 of the prompt content for integrity verification */
+    promptHash: varchar('prompt_hash', { length: 64 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('idx_analyses_extraction_id').on(table.extractionId)],
@@ -189,6 +201,10 @@ export const promptVersions = pgTable(
     version: integer('version').notNull().default(1),
     content: text('content').notNull(),
     isActive: boolean('is_active').notNull().default(false),
+    /** Lifecycle: draft → approved → active → rolled_back */
+    status: varchar('status', { length: 20 }).notNull().default('draft'),
+    /** SHA-256 of prompt content for integrity verification */
+    contentHash: varchar('content_hash', { length: 64 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

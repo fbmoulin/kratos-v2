@@ -95,11 +95,12 @@ Upload → validate PDF → Supabase Storage → documents (status: pending)
   → documents (status: completed)
 ```
 
-### 4.2 Redis BRPOP Workers (DEPRECATED)
+### 4.2 Redis BRPOP Workers (DEPRECATED — Development Fallback Only)
 
-> These workers are deprecated and will be removed once Trigger.dev migration is fully validated. They exist only for environments without Trigger.dev access.
+> **These workers are DEPRECATED and NOT used in production.** Trigger.dev is the sole production pipeline.
+> They exist only as a development fallback for environments without Trigger.dev access and will be removed in a future release.
 
-For environments without Trigger.dev, Redis-based workers consume from named queues:
+For local development without Trigger.dev:
 
 - `analysis-worker/` — consumes `kratos:jobs:analysis` (BRPOP), 4.5min timeout, SIGTERM handler
 - `docx-worker/` — consumes `kratos:jobs:docx` (BRPOP), fetches analysis, builds DOCX, uploads to Supabase Storage
@@ -197,5 +198,5 @@ supervisor → router → rag → specialist (FIRAC+) → drafter → complete
 - **Sentry** — error tracking + session replay (frontend `@sentry/react`, backend `@sentry/node`)
 - **Health probes** — `/v2/health/ready` (DB + Redis), `/v2/health/metrics` (request stats)
 - **Structured logging** — pino JSON logs in production, pino-pretty in dev, silent in test
-- **LangSmith** — planned for LangGraph agent tracing (Chain-of-Thought visibility)
+- **LangSmith** — implemented as tracing config via `buildTracingConfig()` (active when `LANGCHAIN_TRACING_V2=true`). Provides full Chain-of-Thought visibility for all LangGraph agent nodes.
 - **X-Request-ID** — UUID propagation for cross-service log correlation

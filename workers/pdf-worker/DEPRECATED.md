@@ -1,8 +1,12 @@
-# DEPRECATED — Legacy PDF Worker (Celery/Python)
+# ARCHIVED — Legacy PDF Worker (Celery/Python)
 
-**Status:** Superseded by `workers/trigger/src/pdf.ts` (Trigger.dev task) as of v2.6.0.
+**Status:** ARCHIVED. Superseded by `workers/trigger/src/pdf.ts` (Trigger.dev task) as of v2.6.0.
 
-**Do not use this worker for new development.** It is kept for reference only — the Python extraction logic may be useful when implementing the full Docling/pdfplumber/Gemini Vision pipeline (post-MVP).
+> **This worker is not used at runtime.** It is kept as a reference archive only. All production PDF extraction flows through Trigger.dev (`workers/trigger/src/pdf.ts`) which calls the Python extraction logic via `pdf_runner.py` subprocess.
+
+## History
+
+The legacy Celery/Python worker was the original extraction pipeline. It has been fully replaced by Trigger.dev tasks that call the same Python extraction code via `execa` subprocess.
 
 ## Replacement
 
@@ -13,9 +17,12 @@
 | Redis queue via Celery | Trigger.dev managed queue |
 | `docker-compose.yml` profile: worker | Trigger.dev Cloud |
 
-## When to Delete
+## What Is Still Used
+
+The Python extraction code in `src/pipeline.py` and `src/services/pdf_extraction.py` is still called by `workers/trigger/src/pdf_runner.py` via subprocess. The Celery infrastructure (`celery_app.py`, `tasks/`) is NOT used.
+
+## Safe to Delete
 
 This directory can be safely deleted once:
-1. Full PDF extraction pipeline (Docling + pdfplumber + Gemini Vision) is ported to TypeScript or called via subprocess from `pdf.ts`
-2. All useful Python extraction logic has been migrated
-3. The 24 tests in `tests/` have equivalent coverage in `workers/trigger/src/pdf.test.ts`
+1. All Python extraction logic has been fully ported to TypeScript, OR
+2. The subprocess approach (`pdf_runner.py`) is confirmed stable in production

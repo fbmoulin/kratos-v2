@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { ExtractionOutputSchema } from './extraction.js';
+import {
+  ExtractionOutputSchema,
+  DedupeCheckRequestSchema,
+  DedupeCheckResponseSchema,
+} from './extraction.js';
 
 describe('ExtractionOutputSchema', () => {
   it('parses valid complete payload', () => {
@@ -67,5 +71,65 @@ describe('ExtractionOutputSchema', () => {
       rawText: 'some text',
     });
     expect(result.success).toBe(false);
+  });
+
+  it('parses v1.1.0 provenance fields (fileHash, contentHash, processingTimeMs)', () => {
+    const result = ExtractionOutputSchema.safeParse({
+      status: 'completed',
+      rawText: 'content',
+      fileHash: 'a'.repeat(64),
+      contentHash: 'b'.repeat(64),
+      processingTimeMs: 1500,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fileHash).toBe('a'.repeat(64));
+      expect(result.data.contentHash).toBe('b'.repeat(64));
+      expect(result.data.processingTimeMs).toBe(1500);
+    }
+  });
+
+  it('rejects fileHash with wrong length', () => {
+    const result = ExtractionOutputSchema.safeParse({
+      status: 'completed',
+      fileHash: 'tooshort',
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('DedupeCheckRequestSchema', () => {
+  it('parses valid dedup request', () => {
+    const result = DedupeCheckRequestSchema.safeParse({
+      userId: '00000000-0000-0000-0000-000000000001',
+      pdfHash: 'a'.repeat(64),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid userId', () => {
+    const result = DedupeCheckRequestSchema.safeParse({
+      userId: 'not-a-uuid',
+      pdfHash: 'a'.repeat(64),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('DedupeCheckResponseSchema', () => {
+  it('parses duplicate response', () => {
+    const result = DedupeCheckResponseSchema.safeParse({
+      isDuplicate: true,
+      existingDocumentId: '00000000-0000-0000-0000-000000000001',
+      message: 'Documento identico ja processado',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('parses non-duplicate response', () => {
+    const result = DedupeCheckResponseSchema.safeParse({
+      isDuplicate: false,
+    });
+    expect(result.success).toBe(true);
   });
 });

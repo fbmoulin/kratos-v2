@@ -35,7 +35,7 @@ export { buildDrafterXml, getDomainPrompt, DOMAIN_MAP, type DrafterXmlInput } fr
 
 // Prompt Governance
 export { promptRepo } from './prompts/prompt-repo.js';
-export { resolvePrompt, clearPromptCache } from './prompts/prompt-resolver.js';
+export { resolvePrompt, resolvePromptWithMetadata, clearPromptCache, type ResolvedPrompt } from './prompts/prompt-resolver.js';
 export { PROMPT_KEYS, type PromptKey } from './prompts/prompt-keys.js';
 
 // Tracing
