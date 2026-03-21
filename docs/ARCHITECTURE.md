@@ -1,133 +1,189 @@
-# Arquitetura do Sistema KRATOS v2
+# Architecture — KRATOS v2
 
-**Autor**: Manus AI (Agente DevOps & Arquiteto de Soluções)
-**Data**: 15 de Fevereiro de 2026
-**Versão**: 2.4
-
----
-
-## 1. Visão Geral da Arquitetura
-
-O KRATOS v2 é projetado como um sistema distribuído, orientado a eventos e centrado em IA, construído sobre uma arquitetura de microsserviços desacoplados orquestrados por um sistema de agentes inteligentes. A arquitetura visa a escalabilidade, manutenibilidade, segurança e conformidade regulatória (Resolução 615/2025 do CNJ e LGPD), priorizando a automação de processos jurídicos complexos com total auditabilidade.
-
-A arquitetura pode ser dividida em quatro camadas principais:
-
-1.  **Camada de Apresentação (Frontend)**: Uma Single-Page Application (SPA) reativa construída com React 19, responsável pela interação com o usuário, upload de documentos e a interface de Human-in-the-Loop (HITL).
-2.  **Camada de Orquestração e API (Backend)**: Um serviço de API (Node.js/Hono 4.7) que serve como ponto de entrada para o sistema, gerenciando a autenticação (Supabase Auth), o fluxo de dados e a comunicação com a fila de tarefas.
-3.  **Camada de Processamento Assíncrono (Workers)**: Workers dedicados (Python/Celery) que executam as tarefas pesadas e de longa duração, como a extração de conteúdo de PDFs e a execução dos pipelines de IA.
-4.  **Camada de Persistência e Dados (Infraestrutura)**: Um conjunto de serviços gerenciados, incluindo um banco de dados PostgreSQL com capacidades vetoriais, um broker de mensagens Redis, e serviços de armazenamento de arquivos.
-
-![Diagrama da Arquitetura](https://i.imgur.com/example.png) <!-- Placeholder para um diagrama futuro -->
+**Version:** 2.6.0
+**Last verified:** 2026-03-21
 
 ---
 
-## 2. Estrutura do Projeto (Monorepo)
+## 1. Overview
 
-Para gerenciar a complexidade de múltiplos pacotes e aplicações, o KRATOS v2 adota uma estrutura de monorepo utilizando **pnpm workspaces** e **Turborepo**. Esta abordagem centraliza o código, simplifica o gerenciamento de dependências e acelera os processos de build e teste através de caching inteligente.
+KRATOS v2 is a distributed, event-driven, AI-centric legal automation platform built as a TypeScript monorepo. It processes judicial PDFs, applies FIRAC analysis via LangGraph agent orchestration, and generates structured legal drafts with full auditability (Resolucao 615/2025 CNJ, LGPD).
+
+The architecture has four layers:
+
+1. **Presentation Layer** — React 19 SPA (Vite 6 + Tailwind 4 + shadcn/ui) for document upload, pipeline monitoring, and Human-in-the-Loop (HITL) review.
+2. **API Layer** — Hono 4.7 REST API on Node.js, handling authentication (Supabase JWT), rate limiting, and request routing.
+3. **Worker Layer** — Trigger.dev tasks for heavy async processing (PDF extraction, AI analysis, DOCX export), with Redis BRPOP fallback workers for simpler jobs.
+4. **Data Layer** — PostgreSQL 16 with pgvector (via Supabase), Redis 7 (queues + cache), Supabase Storage (file uploads).
+
+---
+
+## 2. Project Structure (Monorepo)
+
+The monorepo uses **pnpm workspaces** and **Turborepo** for build orchestration, caching, and parallel execution.
 
 ```
-kratos/
+kratos-v2/
 ├── apps/
-│   ├── api/          # Backend (Hono 4.7 + Node.js)
-│   └── web/          # Frontend (React 19 + Vite 6 + Tailwind 4)
+│   ├── api/              # REST API (Hono 4.7 + Node.js 22)
+│   └── web/              # Frontend SPA (React 19 + Vite 6 + Tailwind 4)
 ├── packages/
-│   ├── core/         # Lógica de negócio compartilhada, tipos e constantes
-│   ├── db/           # Schema do banco de dados, migrations e ORM (Drizzle)
-│   ├── ai/           # Lógica dos agentes LangGraph, prompts e motor RAG
-│   └── tools/        # Utilitários (extrator de PDF, gerador de DOCX)
+│   ├── core/             # Shared business logic, types, constants
+│   ├── db/               # Drizzle ORM schema, migrations, client
+│   ├── ai/               # LangGraph agents, prompts, RAG engine
+│   └── tools/            # Utilities (PDF extraction helpers, DOCX builder)
 ├── workers/
-│   └── pdf-worker/   # Worker Python (Celery) para processamento de PDF
-├── turbo.json
-├── pnpm-workspace.yaml
-└── .github/
-    └── workflows/    # Pipelines de CI/CD com GitHub Actions
+│   ├── trigger/          # Trigger.dev tasks (pdf, analysis, docx)
+│   ├── analysis-worker/  # Redis BRPOP worker (LangGraph pipeline)
+│   └── docx-worker/      # Redis BRPOP worker (DOCX export)
+├── supabase/             # Migrations and Supabase config
+├── e2e/                  # Playwright E2E tests
+├── docs/                 # Project documentation
+├── turbo.json            # Turborepo task config
+├── trigger.config.ts     # Trigger.dev project config
+└── pnpm-workspace.yaml   # Workspace definitions
 ```
 
--   **Turborepo**: Orquestra os scripts de build, teste e lint, garantindo que apenas os pacotes afetados por uma alteração sejam reprocessados.
--   **pnpm Workspaces**: Gerencia as dependências de forma eficiente, evitando duplicação e garantindo consistência entre os pacotes.
+> **Note:** `workers/pdf-worker/` is a legacy Python/Celery worker, superseded by `workers/trigger/src/pdf.ts`. Kept for reference only — see `workers/pdf-worker/DEPRECATED.md`.
 
 ---
 
-## 3. Camada de Persistência e Dados
+## 3. API Layer (Hono)
 
-### 3.1. Banco de Dados Unificado (PostgreSQL)
+**Stack:** Hono 4.7, Node.js 22, TypeScript
 
-O coração da camada de dados é um cluster **PostgreSQL** gerenciado pelo **Supabase**. Esta escolha unifica o armazenamento relacional, a busca vetorial e a autenticação em uma única plataforma, simplificando a arquitetura do MVP.
+**Middleware chain** (applied in order):
+1. `logger()` — structured request/response logging (pino)
+2. `secureHeaders()` — X-Content-Type-Options, X-Frame-Options, etc.
+3. `X-Request-ID` — propagates or generates UUID for log correlation
+4. `cors()` — configurable origin (production requires non-localhost)
+5. `authMiddleware` — Supabase JWT verification (on `/documents/*` routes)
 
--   **Extensão `pgvector`**: Habilitada para permitir a indexação e a busca de similaridade de embeddings vetoriais, sendo a base para o motor de Retrieval-Augmented Generation (RAG).
--   **Índice HNSW**: Utilizado na coluna de embeddings para garantir buscas vetoriais de alta performance.
--   **ORM (Drizzle)**: Abstrai a comunicação com o banco de dados, oferecendo segurança de tipos e facilitando futuras migrações.
--   **Auditoria Imutável**: Triggers SQL na tabela `audit_logs` garantem a conformidade com a Resolução 615/2025, registrando todas as alterações em dados críticos de forma automática e imutável.
+**Route groups:**
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `GET /v2/` | Public | API metadata (name, version, status) |
+| `GET /v2/health/ready` | Public | Liveness + readiness (DB + Redis probes) |
+| `GET /v2/health/metrics` | Public | Request count, error rate, avg latency |
+| `/v2/documents/*` | JWT | Document CRUD, upload, analyze, review, export |
 
-### 3.2. Fila de Mensagens e Cache (Redis)
+**Rate limiting:** upload (10/min), analyze (5/min), export (20/min) via `@kratos/core` constants.
 
-O **Redis**, gerenciado pelo Upstash, desempenha duas funções críticas:
-
-1.  **Message Broker para Celery**: Gerencia a fila de tarefas assíncronas, garantindo que o processamento de PDFs não bloqueie a API principal e possa ser escalado de forma independente.
-2.  **Cache de Alta Performance**: Armazena resultados de operações custosas, como extrações de PDF e chamadas a APIs de IA, reduzindo a latência e os custos operacionais. As estratégias de invalidação são baseadas em TTL (Time-to-Live) e eventos.
-
-### 3.3. Armazenamento de Arquivos
-
-O **Supabase Storage** é utilizado para o armazenamento seguro dos documentos PDF enviados pelos usuários. Ele se integra nativamente com o sistema de autenticação e as políticas de acesso do Supabase.
-
----
-
-## 4. Camada de Processamento Assíncrono
-
-### 4.1. Pipeline de Ingestão e Extração
-
-O processamento de documentos é uma operação assíncrona orquestrada pelo **Celery** e executada por workers Python. O fluxo é o seguinte:
-
-1.  A API recebe o upload do PDF, salva-o no Supabase Storage e enfileira um job no Redis.
-2.  Um worker Celery consome o job da fila.
-3.  O worker executa um **pipeline de extração híbrida**:
-    a.  **Docling (IBM)**: Realiza a extração principal da estrutura do documento (texto, seções, tabelas).
-    b.  **pdfplumber**: Atua como um extrator secundário para tabelas, oferecendo alta precisão.
-    c.  **Gemini 2.5 Flash (Vision)**: Analisa imagens e gráficos extraídos, gerando descrições textuais.
-4.  O conteúdo extraído é validado por schemas **Pydantic** e salvo na tabela `extractions`.
-5.  O status do documento é atualizado e o frontend é notificado.
-
-### 4.2. Orquestração de Agentes de IA (LangGraph)
-
-O núcleo da inteligência do KRATOS é um grafo de agentes construído com **LangGraph**. Esta abordagem modela o processo de análise jurídica como um fluxo de estados, onde cada nó é um agente especializado e as arestas são transições condicionais.
-
--   **Supervisor de Complexidade**: Um agente inicial que roteia a tarefa para o fluxo apropriado com base na complexidade do documento, otimizando o uso de modelos de IA.
--   **Agentes Especialistas**: Agentes focados em matérias específicas (Cível, Penal, etc.) que aplicam o framework FIRAC (Facts, Issue, Rule, Application, Conclusion).
--   **Motor RAG**: Antes de cada geração, o sistema recupera precedentes jurídicos relevantes do banco de dados (`pgvector`) e os injeta no prompt como exemplos (few-shot prompting), guiando o modelo para a linguagem e o formato corretos.
--   **Roteamento de Modelos (OpenRouter)**: O sistema utiliza o OpenRouter para selecionar dinamicamente o melhor modelo de IA (ex: Gemini 2.5 Flash, Claude Sonnet 4, Claude Opus 4) para cada tarefa, equilibrando custo, velocidade e qualidade de reasoning.
+**Production startup validation:** crashes fast if `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, or `TRIGGER_SECRET_KEY` are missing.
 
 ---
 
-## 5. Segurança e Conformidade
+## 4. Worker Layer
 
-### 5.1. Gestão de Segredos
+### 4.1 Trigger.dev Tasks (Primary)
 
-No MVP, os segredos (chaves de API, URLs de banco de dados) são gerenciados através das **variáveis de ambiente** do provedor de deploy (Vercel, Fly.io). Para a fase enterprise, está planejada a migração para uma solução de vault centralizada como o **Infisical**, que permite a rotação automática e o gerenciamento de identidades de máquina.
+Trigger.dev SDK 4.3 provides durable, retryable background tasks with observability. Three tasks are registered:
 
-### 5.2. Autenticação e Autorização
+| Task | File | Queue | Purpose |
+|------|------|-------|---------|
+| `pdf-extraction` | `workers/trigger/src/pdf.ts` | Trigger.dev managed | Extracts text/tables from PDFs (calls Python subprocess via `execa`) |
+| `analysis-job` | `workers/trigger/src/analysis.ts` | Trigger.dev managed | Runs LangGraph AI pipeline (supervisor → router → RAG → specialist → drafter) |
+| `docx-export` | `workers/trigger/src/docx.ts` | Trigger.dev managed | Generates DOCX via `@kratos/tools`, uploads to Supabase Storage |
 
-O **Supabase Auth** gerencia todo o ciclo de vida da autenticação de usuários, incluindo registro, login e gerenciamento de sessão via JWTs. As políticas de Row-Level Security (RLS) do PostgreSQL são utilizadas para garantir que os usuários só possam acessar seus próprios dados.
+### 4.2 Redis BRPOP Workers (Fallback)
 
-### 5.3. Conformidade (LGPD e CNJ)
+For environments without Trigger.dev, Redis-based workers consume from named queues:
 
--   **LGPD**: O sistema é projetado com princípios de *privacy by design*, incluindo a anonimização de dados em logs, políticas de retenção de dados e consentimento explícito do usuário.
--   **Resolução 615/2025 CNJ**: A trilha de auditoria imutável, implementada via triggers no banco de dados, garante a rastreabilidade completa de todas as operações e decisões de IA, conforme exigido pela resolução.
+- `analysis-worker/` — consumes `kratos:jobs:analysis` (BRPOP), 4.5min timeout, SIGTERM handler
+- `docx-worker/` — consumes `kratos:jobs:docx` (BRPOP), fetches analysis, builds DOCX, uploads to Supabase Storage
 
 ---
 
-## 6. CI/CD e Monitoramento
+## 5. AI Layer (LangGraph)
 
-### 6.1. Pipeline de CI/CD
+**Stack:** LangGraph 1.1, LangChain core, Anthropic (Claude), Google (Gemini)
 
-O pipeline de integração e entrega contínua é automatizado com **GitHub Actions**:
+The AI pipeline is modeled as a state machine graph:
 
--   **CI (em Pull Requests)**: Executa linting, checagem de tipos e testes unitários nos pacotes afetados pela alteração.
--   **CD (em push para `main`)**: Realiza o build, executa testes de integração e faz o deploy automático para o ambiente de staging.
--   **Release (em criação de tag)**: Promove o deploy para o ambiente de produção após aprovação manual.
+```
+supervisor → router → rag → specialist (FIRAC+) → drafter → complete
+```
 
-### 6.2. Observabilidade e Tracing
+**Nodes:**
+- **Supervisor** — classifies document complexity (7-factor scoring), selects model tier
+- **Router** — routes to domain-specific specialist (Gemini Flash, low cost)
+- **RAG** — retrieves relevant precedents via hybrid search (vector + graph + RRF fusion)
+- **Specialist** — applies FIRAC+ Enterprise v3.0 (7-phase Chain-of-Thought) with domain prompts
+- **Drafter** — generates structured legal draft using domain prompt registry (GENERICO, BANCARIO, CONSUMIDOR + fallback)
 
--   **Sentry**: Integrado no frontend (`@sentry/react` com ErrorBoundary) e no backend (`@sentry/node` via `app.onError`) para error tracking em tempo real, session replay e performance monitoring.
--   **Health Checks**: Endpoint `/v2/health/ready` verifica conectividade com DB e Redis, retornando 503 se degradado. Endpoint `/v2/health/metrics` expõe request count, error rate e latência média.
--   **LangSmith**: Planejado para integração com agentes de IA, fornecendo tracing detalhado (Chain-of-Thought) de cada decisão.
--   **Logging Estruturado**: Todas as aplicações e workers geram logs estruturados em JSON, que podem ser agregados em uma plataforma de observabilidade (ex: Datadog, New Relic) para monitoramento em tempo real e criação de alertas.
+**Model routing:** 5-tier model selection based on complexity score — from Gemini Flash (simple) to Claude Opus (complex).
+
+**RAG engine:**
+- `vector-search` — pgvector cosine similarity on `precedents.embedding` (1536d)
+- `graph-search` — knowledge graph traversal via `graph_entities` + `graph_relations`
+- `hybrid-search` — Reciprocal Rank Fusion (RRF) combining vector + graph results
+
+---
+
+## 6. Data Layer
+
+### 6.1 PostgreSQL (Supabase)
+
+- **ORM:** Drizzle ORM with typed schema
+- **Extension:** pgvector for embedding storage and similarity search
+- **Tables:** `documents`, `extractions`, `analyses`, `precedents`, `graph_entities`, `graph_relations`, `prompt_versions`, `audit_logs`
+- **Audit trail:** Triggers on `audit_logs` ensure immutable logging of all data mutations (CNJ 615/2025 compliance)
+- **Connection pool:** max=5, idle_timeout=20s, connect_timeout=10s
+
+### 6.2 Redis 7
+
+- **Job queues:** `kratos:jobs:analysis`, `kratos:jobs:docx` (BRPOP pattern)
+- **Cache:** Extraction results and AI API responses (TTL-based invalidation)
+- **Resilience:** maxRetriesPerRequest, retryStrategy, error handler configured
+
+### 6.3 Supabase Storage
+
+- **Purpose:** Secure file storage for uploaded PDFs and generated DOCX files
+- **Auth integration:** Supabase Auth policies control file access
+- **Bucket:** Dedicated DOCX export bucket
+
+---
+
+## 7. Security and Compliance
+
+### 7.1 Authentication
+- **Supabase Auth** — JWT-based user lifecycle (register, login, session management)
+- **Row-Level Security (RLS)** — PostgreSQL policies ensure user data isolation
+- **Dev bypass** — `TEST_USER_ID` only works when `NODE_ENV=development`; blocked in production/staging
+
+### 7.2 Input Validation
+- PDF magic bytes validation (`%PDF-` header check)
+- Filename sanitization (path traversal chars stripped, 200-char limit)
+- Zod validation on all query parameters (page, limit, status)
+- Consistent error format: `{ error: { message } }`
+
+### 7.3 Compliance
+- **CNJ 615/2025** — Immutable audit trail via database triggers on `audit_logs`
+- **LGPD** — Privacy-by-design: data anonymization in logs, retention policies, explicit consent
+
+---
+
+## 8. Deployment
+
+| Component | Platform | URL Pattern |
+|-----------|----------|-------------|
+| Frontend (React SPA) | Vercel | `https://kratos.vercel.app` |
+| API + Workers | Railway | `https://kratos-api.up.railway.app` |
+| Database + Auth + Storage | Supabase | `https://xxx.supabase.co` |
+| Background Tasks | Trigger.dev | Trigger.dev Cloud |
+
+### CI/CD (GitHub Actions)
+- **CI** (`ci.yml`) — lint, type-check, test on PRs (all packages via Turborepo)
+- **Deploy staging** (`deploy-staging.yml`) — auto-deploy Vercel + Railway on push to `main`
+- **Deploy production** (`deploy-production.yml`) — manual approval on tag `v*`
+- **Integration** (`integration.yml`) — nightly docker-compose integration tests
+
+---
+
+## 9. Observability
+
+- **Sentry** — error tracking + session replay (frontend `@sentry/react`, backend `@sentry/node`)
+- **Health probes** — `/v2/health/ready` (DB + Redis), `/v2/health/metrics` (request stats)
+- **Structured logging** — pino JSON logs in production, pino-pretty in dev, silent in test
+- **LangSmith** — planned for LangGraph agent tracing (Chain-of-Thought visibility)
+- **X-Request-ID** — UUID propagation for cross-service log correlation
