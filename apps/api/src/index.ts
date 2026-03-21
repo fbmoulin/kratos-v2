@@ -33,6 +33,7 @@ import { randomUUID } from 'node:crypto';
 import { APP_NAME, APP_VERSION } from '@kratos/core';
 import { healthRouter } from './routes/health.js';
 import { documentsRouter } from './routes/documents.js';
+import { ingestionRouter } from './routes/ingestion.js';
 import { promptsRouter } from './routes/prompts.js';
 import { authMiddleware } from './middleware/auth.js';
 import { initSentry, captureError } from './middleware/sentry.js';
@@ -76,12 +77,14 @@ app.use(
   }),
 );
 
-// Auth middleware — only applied to document routes
+// Auth middleware — applied to document and ingestion routes
 app.use('/documents/*', authMiddleware);
+app.use('/ingest/*', authMiddleware);
 
 // Route registration
 app.route('/health', healthRouter);
 app.route('/documents', documentsRouter);
+app.route('/ingest', ingestionRouter);
 app.route('/prompts', promptsRouter);
 
 /** Root endpoint — returns API metadata. Public, no auth required. */

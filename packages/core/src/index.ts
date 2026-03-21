@@ -193,6 +193,7 @@ export interface RAGContext {
 // ============================================================
 
 export { ExtractionOutputSchema, type ExtractionOutput } from './schemas/extraction.js';
+export { IngestionPayloadSchema, type IngestionPayload } from './schemas/ingestion.js';
 
 // ============================================================
 // Constants
