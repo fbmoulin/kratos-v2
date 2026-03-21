@@ -123,7 +123,8 @@ export interface AuditLog {
   action: string;
   payloadBefore: Record<string, unknown> | null;
   payloadAfter: Record<string, unknown> | null;
-  userId: string;
+  /** Null for system-generated entries (e.g., SQL triggers) */
+  userId: string | null;
   createdAt: Date;
 }
 
