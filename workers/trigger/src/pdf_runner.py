@@ -12,16 +12,16 @@ import sys
 import os
 import logging
 
-# Add pdf-worker src to path so we can import from it
+# Add trigger/ root to path so we can import the extraction package
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_WORKER_DIR = os.path.join(_SCRIPT_DIR, "..", "..", "..", "workers", "pdf-worker")
-sys.path.insert(0, _WORKER_DIR)
+_TRIGGER_DIR = os.path.join(_SCRIPT_DIR, "..")
+sys.path.insert(0, _TRIGGER_DIR)
 
 # Suppress pipeline noise on stdout (only our JSON output should go there)
 logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
 
-from src.pipeline import run_pipeline, PipelineError  # noqa: E402
-from src.services import storage  # noqa: E402
+from extraction.pipeline import run_pipeline, PipelineError  # noqa: E402
+from extraction.services import storage  # noqa: E402
 
 
 def main() -> None:

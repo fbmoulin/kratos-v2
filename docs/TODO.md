@@ -47,7 +47,7 @@
 - [x] RAG engine (vector + graph + RRF hybrid search)
 - [x] Domain prompt registry (GENERICO, BANCARIO, CONSUMIDOR)
 - [x] 75 AI tests (16 suites)
-- [ ] LangSmith full integration — **POST-MVP**
+- [x] LangSmith full integration — **Done in Sprint 4 (v2.5.0)**
 - [ ] Chain-of-Thought persistence in DB — **POST-MVP**
 
 ---

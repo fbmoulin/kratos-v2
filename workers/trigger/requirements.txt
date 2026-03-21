@@ -1,0 +1,6 @@
+# KRATOS v2 — Trigger Worker Python Dependencies
+# Used by extraction/ package (called via pdf_runner.py subprocess)
+pdfplumber==0.11.*
+pydantic==2.*
+pydantic-settings==2.*
+supabase==2.*

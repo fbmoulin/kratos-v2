@@ -1,6 +1,6 @@
 # Architecture — KRATOS v2
 
-**Version:** 2.6.0
+**Version:** 2.8.0
 **Last verified:** 2026-03-21
 
 ---
@@ -44,7 +44,7 @@ kratos-v2/
 └── pnpm-workspace.yaml   # Workspace definitions
 ```
 
-> **Note:** `workers/pdf-worker/` is a legacy Python/Celery worker, superseded by `workers/trigger/src/pdf.ts`. Kept for reference only — see `workers/pdf-worker/DEPRECATED.md`.
+> **Note:** PDF extraction Python code lives in `workers/trigger/extraction/` as a self-contained package, called via `pdf_runner.py` subprocess. The legacy `workers/pdf-worker/` is archived reference only — see `workers/pdf-worker/DEPRECATED.md`.
 
 ---
 

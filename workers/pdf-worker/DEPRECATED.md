@@ -17,12 +17,8 @@ The legacy Celery/Python worker was the original extraction pipeline. It has bee
 | Redis queue via Celery | Trigger.dev managed queue |
 | `docker-compose.yml` profile: worker | Trigger.dev Cloud |
 
-## What Is Still Used
+## No Longer Used at Runtime
 
-The Python extraction code in `src/pipeline.py` and `src/services/pdf_extraction.py` is still called by `workers/trigger/src/pdf_runner.py` via subprocess. The Celery infrastructure (`celery_app.py`, `tasks/`) is NOT used.
+As of v2.8.0, the Python extraction code has been migrated to `workers/trigger/extraction/` as a self-contained package. `pdf_runner.py` now imports from `extraction.pipeline` instead of this directory.
 
-## Safe to Delete
-
-This directory can be safely deleted once:
-1. All Python extraction logic has been fully ported to TypeScript, OR
-2. The subprocess approach (`pdf_runner.py`) is confirmed stable in production
+This directory is **safe to delete** — it exists only as historical reference. The canonical extraction code lives at `workers/trigger/extraction/`.
