@@ -666,6 +666,63 @@ describe('Document routes', () => {
         }),
       );
     });
+
+    test('SECURITY: rejects body > 1 MiB with 413 (defends OOM-kill)', async () => {
+      // Pre-fix: a 500 MB JSON body would be fully buffered into memory
+      // before zod validation, OOM-killing the Node container.
+      // Post-fix: Content-Length check on this route returns 413 immediately.
+      // (In production, fetch + Caddy both set Content-Length on JSON bodies;
+      // we set it explicitly here because vitest's app.request doesn't.)
+      const huge = 'A'.repeat(2 * 1024 * 1024); // 2 MiB > 1 MiB cap
+      const body = JSON.stringify({
+        action: 'revised',
+        comments: 'x',
+        revisedContent: { draft: huge },
+      });
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: {
+          ...authHeader,
+          'Content-Type': 'application/json',
+          'Content-Length': String(body.length),
+        },
+        body,
+      });
+      expect(res.status).toBe(413);
+    });
+
+    test('SECURITY: rejects with 413 when Content-Length is negative', async () => {
+      // Reject malformed Content-Length outright instead of silently
+      // letting the route handler accept the body.
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: {
+          ...authHeader,
+          'Content-Type': 'application/json',
+          'Content-Length': '-1',
+        },
+        body: JSON.stringify({ action: 'approved', comments: '' }),
+      });
+      expect(res.status).toBe(413);
+    });
+
+    test('SECURITY: passes through when Content-Length header is missing', async () => {
+      // Documents the (Caddy-dependent) behavior: with no Content-Length
+      // declared the middleware skips its check. In production Caddy adds
+      // it; this test guards that the middleware does not accidentally
+      // reject otherwise-valid requests.
+      const { documentRepo } = await import('../services/document-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(null); // 404 path
+      const res = await app.request('/v2/documents/doc-missing/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approved', comments: '' }),
+      });
+      // Must NOT be 413 — the middleware should pass the request through.
+      // Route returns 404 (doc not found) which proves the middleware
+      // didn't short-circuit.
+      expect(res.status).not.toBe(413);
+    });
   });
 
   // ---- Export routes ----

@@ -1,3 +1,4 @@
+import type { Context, Next } from 'hono';
 import { Hono } from 'hono';
 import { createHash } from 'node:crypto';
 import type { AppEnv } from '../types.js';
@@ -9,6 +10,45 @@ import { analysisRepo } from '../services/analysis-repo.js';
 import { auditRepo } from '../services/audit-repo.js';
 import { rateLimiter } from '../middleware/rate-limit.js';
 import { RATE_LIMITS } from '@kratos/core';
+
+// JSON body cap for review/analyze/export endpoints — defends against
+// OOM-kill of the Node process via a giant `revisedContent` payload.
+// 1 MB is generous for a typical reviewed minuta (≈100KB) but rejects
+// the >500MB attack documented in the 2026-04-16 audit.
+//
+// Implemented as a Content-Length check rather than Hono's bodyLimit
+// because (a) the realistic attack vector goes through Caddy which
+// sets Content-Length from buffered bytes, (b) Hono's stream-reading
+// bodyLimit consumes the body and breaks downstream c.req.json() in
+// vitest tests.
+//
+// LIMITATION (defense gap, tracked as TODO): a direct hit bypassing
+// Caddy can spoof Content-Length to a small value while sending a
+// large body. The route handler then calls c.req.json() which would
+// buffer the actual bytes. In production Caddy is the backstop; in
+// other deploy topologies (or if Caddy is bypassed via internal port
+// exposure), an additional parser-level byte cap is required. See
+// https://github.com/honojs/hono/issues for body-limit + tests work.
+//
+// Negative or non-numeric Content-Length values are rejected outright
+// to avoid being interpreted as 0 (and slipping through).
+//
+// The multipart upload route (POST /) is intentionally NOT capped here
+// — it has its own 50MB limit baked into the existing storageService.
+const JSON_BODY_LIMIT_BYTES = 1 * 1024 * 1024; // 1 MiB
+
+async function jsonBodyLimit(c: Context, next: Next): Promise<Response | void> {
+  const lenHeader = c.req.header('Content-Length');
+  if (lenHeader !== undefined) {
+    const len = Number.parseInt(lenHeader, 10);
+    // Reject malformed (NaN), negative, or oversize Content-Length headers.
+    // A well-formed in-range value is required to proceed.
+    if (!Number.isFinite(len) || len < 0 || len > JSON_BODY_LIMIT_BYTES) {
+      return c.json({ error: { message: 'Invalid or oversize request body' } }, 413);
+    }
+  }
+  return next();
+}
 
 const reviewSchema = z.object({
   action: z.enum(['approved', 'revised', 'rejected']),
@@ -174,7 +214,7 @@ documentsRouter.get('/:id/extraction', async (c) => {
   return c.json({ data: extraction });
 });
 
-documentsRouter.post('/:id/analyze', rateLimiter(RATE_LIMITS.ANALYSIS_PER_MINUTE), async (c) => {
+documentsRouter.post('/:id/analyze', jsonBodyLimit, rateLimiter(RATE_LIMITS.ANALYSIS_PER_MINUTE), async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 
@@ -228,7 +268,7 @@ documentsRouter.post('/:id/analyze', rateLimiter(RATE_LIMITS.ANALYSIS_PER_MINUTE
 // PUT /:id/review — Human-in-the-Loop review action
 // ============================================================
 
-documentsRouter.put('/:id/review', async (c) => {
+documentsRouter.put('/:id/review', jsonBodyLimit, async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 
@@ -314,7 +354,7 @@ documentsRouter.get('/:id/export', async (c) => {
 // POST /:id/export — Trigger DOCX generation
 // ============================================================
 
-documentsRouter.post('/:id/export', rateLimiter(RATE_LIMITS.EXPORT_PER_MINUTE), async (c) => {
+documentsRouter.post('/:id/export', jsonBodyLimit, rateLimiter(RATE_LIMITS.EXPORT_PER_MINUTE), async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
 
