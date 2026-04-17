@@ -690,6 +690,39 @@ describe('Document routes', () => {
       });
       expect(res.status).toBe(413);
     });
+
+    test('SECURITY: rejects with 413 when Content-Length is negative', async () => {
+      // Reject malformed Content-Length outright instead of silently
+      // letting the route handler accept the body.
+      const res = await app.request('/v2/documents/doc-1/review', {
+        method: 'PUT',
+        headers: {
+          ...authHeader,
+          'Content-Type': 'application/json',
+          'Content-Length': '-1',
+        },
+        body: JSON.stringify({ action: 'approved', comments: '' }),
+      });
+      expect(res.status).toBe(413);
+    });
+
+    test('SECURITY: passes through when Content-Length header is missing', async () => {
+      // Documents the (Caddy-dependent) behavior: with no Content-Length
+      // declared the middleware skips its check. In production Caddy adds
+      // it; this test guards that the middleware does not accidentally
+      // reject otherwise-valid requests.
+      const { documentRepo } = await import('../services/document-repo.js');
+      vi.mocked(documentRepo.getById).mockResolvedValueOnce(null); // 404 path
+      const res = await app.request('/v2/documents/doc-missing/review', {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approved', comments: '' }),
+      });
+      // Must NOT be 413 — the middleware should pass the request through.
+      // Route returns 404 (doc not found) which proves the middleware
+      // didn't short-circuit.
+      expect(res.status).not.toBe(413);
+    });
   });
 
   // ---- Export routes ----

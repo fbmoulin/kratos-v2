@@ -194,4 +194,28 @@ describe('authMiddleware', () => {
     const body = await res.json();
     expect(body.userId).toBe('test-user-789');
   });
+
+  test('SECURITY: rejects auth bypass when NODE_ENV is undefined', async () => {
+    // Containers without NODE_ENV set must NOT activate the dev bypass.
+    // Allowlist requires explicit "development" or "test" — undefined is
+    // neither.
+    vi.stubEnv('TEST_USER_ID', 'bypass-user');
+    vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
+    vi.stubEnv('SUPABASE_KEY', 'test-key');
+    // Note: deliberately NOT calling vi.stubEnv('NODE_ENV', ...).
+    // beforeEach calls vi.unstubAllEnvs() so NODE_ENV is whatever the
+    // test runner sets — vitest sets it to 'test' by default. We override
+    // with delete to simulate the "unset" case.
+    delete process.env.NODE_ENV;
+
+    const { authMiddleware } = await import('./auth.js');
+    const { Hono } = await import('hono');
+
+    const app = new Hono();
+    app.use('*', authMiddleware);
+    app.get('/', (c) => c.json({ userId: c.get('userId') }));
+
+    const res = await app.request('/', { headers: {} });
+    expect(res.status).toBe(401);
+  });
 });
