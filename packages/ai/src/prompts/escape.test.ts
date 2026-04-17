@@ -54,4 +54,23 @@ describe("escapeXmlText", () => {
     const result = escapeXmlText(text, Infinity);
     expect(result.length).toBe(200_000);
   });
+
+  test("truncation backs off to entity boundary so output never ends mid-entity", () => {
+    // Construct input where the cut lands inside a multi-char entity.
+    // "<<<<<<<<<<X" → "&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;X" (50 chars).
+    // Cap at 13 would naively cut "&lt;&lt;&l" → backed off to 12 (last "&").
+    const text = "<".repeat(10) + "X";
+    const result = escapeXmlText(text, 13);
+    // Truncated portion must end exactly at a "&lt;" boundary, NOT mid-entity.
+    expect(result).toMatch(/^(?:&lt;)+\.\.\.\[truncated from \d+ chars\]$/);
+    // No bare trailing "&" or "&l" or "&lt" without the closing ";"
+    expect(result.slice(0, result.indexOf("..."))).toMatch(/(&lt;)+$/);
+  });
+
+  test("preserves embedded null byte as-is (out-of-scope for XML escape)", () => {
+    // Documenting current behavior: \u0000 is NOT in the escape set.
+    // If downstream parsers misbehave, that's a separate filter's job.
+    const result = escapeXmlText("ok\u0000ok");
+    expect(result).toBe("ok\u0000ok");
+  });
 });
