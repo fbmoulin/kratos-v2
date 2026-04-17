@@ -41,10 +41,19 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  * @returns 401 if token is missing, invalid, or expired; 500 on unexpected errors
  */
 export async function authMiddleware(c: Context, next: Next) {
-  // Dev-only auth bypass for E2E testing — hard-blocked in production
+  // Dev-only auth bypass for E2E testing.
+  //
+  // Allowlist (NOT denylist): the bypass activates ONLY when NODE_ENV is
+  // explicitly "development" or "test" AND TEST_USER_ID is set.
+  //
+  // The previous implementation was a denylist
+  // (NODE_ENV !== 'production' && NODE_ENV !== 'staging'), which let
+  // any unexpected env name through — "preview", "hotfix", empty
+  // string, undefined, etc. A misconfigured Vercel preview deploy or a
+  // hotfix-staging container with TEST_USER_ID inherited from CI would
+  // expose every authenticated route unauthenticated.
   if (
-    process.env.NODE_ENV !== 'production' &&
-    process.env.NODE_ENV !== 'staging' &&
+    (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
     process.env.TEST_USER_ID
   ) {
     c.set('userId', process.env.TEST_USER_ID);
