@@ -2,6 +2,8 @@ import type { FIRACResult, RAGContext } from '@kratos/core';
 import { resolvePrompt } from './prompt-resolver.js';
 import { PROMPT_KEYS } from './prompt-keys.js';
 
+import { escapeXmlText } from './escape.js';
+
 export interface DrafterXmlInput {
   /** Full raw text extracted from the PDF */
   rawText: string;
@@ -29,31 +31,37 @@ export function buildDrafterXml(input: DrafterXmlInput): string {
   const meta = input.metadados ?? {};
   const ragAvailable = input.ragContext && input.ragContext.fusedResults.length > 0;
 
+  // Defense-in-depth: every interpolated field is XML-escaped because each
+  // ultimately derives from attacker-controllable PDF text. metadados come
+  // from PDF parsing; firacResult is LLM output of a previous stage that
+  // saw the same rawText; ragContext is partly built from PDF entities.
   const ragContextText = ragAvailable
-    ? input.ragContext!.fusedResults.map((r) => `[${r.source}] ${r.content}`).join('\n')
+    ? input
+        .ragContext!.fusedResults.map((r) => `[${escapeXmlText(r.source, 100)}] ${escapeXmlText(r.content)}`)
+        .join('\n')
     : '';
 
   return `<case>
   <metadados>
-    <numero_processo>${meta.numeroProcesso ?? ''}</numero_processo>
-    <orgao_julgador>${meta.orgaoJulgador ?? ''}</orgao_julgador>
-    <fase_processual>${meta.faseProcessual ?? ''}</fase_processual>
-    <classe>${meta.classe ?? ''}</classe>
-    <assunto>${meta.assunto ?? ''}</assunto>
+    <numero_processo>${escapeXmlText(meta.numeroProcesso ?? '', 100)}</numero_processo>
+    <orgao_julgador>${escapeXmlText(meta.orgaoJulgador ?? '', 200)}</orgao_julgador>
+    <fase_processual>${escapeXmlText(meta.faseProcessual ?? '', 100)}</fase_processual>
+    <classe>${escapeXmlText(meta.classe ?? '', 200)}</classe>
+    <assunto>${escapeXmlText(meta.assunto ?? '', 500)}</assunto>
   </metadados>
 
   <documentos>
     <document id="extraction" source="pdf-worker" page="all">
-      <conteudo>${input.rawText}</conteudo>
+      <conteudo>${escapeXmlText(input.rawText)}</conteudo>
     </document>
   </documentos>
 
   <firac>
-    <fatos>${input.firacResult.facts}</fatos>
-    <questoes>${input.firacResult.issue}</questoes>
-    <regras>${input.firacResult.rule}</regras>
-    <analysis>${input.firacResult.analysis}</analysis>
-    <conclusion>${input.firacResult.conclusion}</conclusion>
+    <fatos>${escapeXmlText(input.firacResult.facts)}</fatos>
+    <questoes>${escapeXmlText(input.firacResult.issue)}</questoes>
+    <regras>${escapeXmlText(input.firacResult.rule)}</regras>
+    <analysis>${escapeXmlText(input.firacResult.analysis)}</analysis>
+    <conclusion>${escapeXmlText(input.firacResult.conclusion)}</conclusion>
   </firac>
 
   <graph_rag>
