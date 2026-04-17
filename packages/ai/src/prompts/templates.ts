@@ -5,8 +5,9 @@
  * - Specialist: generates FIRAC analysis with optional RAG context
  */
 
-import { resolvePrompt } from './prompt-resolver.js';
+import { escapeXmlText } from './escape.js';
 import { PROMPT_KEYS } from './prompt-keys.js';
+import { resolvePrompt } from './prompt-resolver.js';
 
 const HARDCODED_ROUTER_PROMPT = `Voce e um classificador de documentos juridicos brasileiros.
 
@@ -27,10 +28,13 @@ Campos obrigatorios:
  *
  * The base template is resolved from DB (if an active version exists) or
  * falls back to the hardcoded constant above.
+ *
+ * SECURITY: `text` is escapeXmlText'd before interpolation to neutralize
+ * prompt-injection via closing-tag markup in adversarial PDF content.
  */
 export async function buildRouterPrompt(text: string): Promise<string> {
   const template = await resolvePrompt(PROMPT_KEYS.ROUTER, HARDCODED_ROUTER_PROMPT);
-  return `${template}\n\n<texto_extraido>\n${text}\n</texto_extraido>\n\nResponda APENAS com o objeto JSON, sem texto adicional.`;
+  return `${template}\n\n<texto_extraido>\n${escapeXmlText(text)}\n</texto_extraido>\n\nResponda APENAS com o objeto JSON, sem texto adicional.`;
 }
 
 export interface SpecialistPromptInput {
@@ -45,10 +49,13 @@ export interface SpecialistPromptInput {
  *
  * Generates a structured legal analysis following the FIRAC framework:
  * FATOS, QUESTAO (Issue), REGRA (Rule), ANALISE (Application), CONCLUSAO (Conclusion).
+ *
+ * SECURITY: `input.text` and `input.ragContext` are escapeXmlText'd before
+ * interpolation to neutralize prompt-injection via closing-tag markup.
  */
 export function buildSpecialistPrompt(input: SpecialistPromptInput): string {
   const ragSection = input.ragContext
-    ? `\n<contexto_legal>\n${input.ragContext}\n</contexto_legal>\n`
+    ? `\n<contexto_legal>\n${escapeXmlText(input.ragContext)}\n</contexto_legal>\n`
     : '';
 
   return `Voce e um especialista em analise juridica brasileira.
@@ -68,7 +75,7 @@ Estrutura FIRAC obrigatoria:
 - "reasoning_trace": breve descricao do raciocinio utilizado
 
 <texto_extraido>
-${input.text}
+${escapeXmlText(input.text)}
 </texto_extraido>
 
 Responda APENAS com o objeto JSON, sem texto adicional.`;

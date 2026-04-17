@@ -8,8 +8,9 @@
  * Para minutas de decisão/sentença, usar prompts especialistas separados.
  */
 
-import { resolvePrompt } from './prompt-resolver.js';
+import { escapeXmlText } from './escape.js';
 import { PROMPT_KEYS } from './prompt-keys.js';
+import { resolvePrompt } from './prompt-resolver.js';
 
 export interface FiracEnterpriseInput {
   /** Texto extraído dos documentos do processo */
@@ -57,7 +58,7 @@ export async function buildFiracEnterprisePrompt(input: FiracEnterpriseInput): P
     ? `\n<contexto_legal_rag>
 Os seguintes precedentes, súmulas e dispositivos legais foram recuperados do knowledge base e podem ser relevantes para este caso. Utilize-os como referência adicional, mas sempre priorizando o que consta nos documentos do processo.
 
-${input.ragContext}
+${escapeXmlText(input.ragContext)}
 </contexto_legal_rag>\n`
     : '';
 
@@ -186,7 +187,7 @@ Esta análise constitui subsídio técnico para decisão judicial, não substitu
 5. Sem limite de extensão — a análise deve cobrir integralmente o caso.
 
 <documentos_do_processo>
-${input.rawText}
+${escapeXmlText(input.rawText)}
 </documentos_do_processo>
 
 Respire fundo. Proceda fase a fase.`;
